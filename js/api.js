@@ -61,7 +61,7 @@
                 tafUnavailable = false;
             }
         } catch (e) {
-            tafText = 'TAF verisine ulaşılamadı (Bağlantı veya proxy hatası).';
+            tafText = 'Resmi TAF sunucularından doğrudan veri çekimi tarayıcı güvenliği (CORS) nedeniyle sağlanamıyor. (Proxy hatası)';
         }
 
         return {

@@ -295,6 +295,10 @@
             }
         } catch { /* Invalid local preference: use visible layers. */ }
         applyLayerVisibility();
+
+        if (window.innerWidth <= 720) {
+            dashboard.classList.add('collapsed');
+        }
         $('theme-btn').addEventListener('click', () => {
             const light = document.body.classList.toggle('light-mode');
             window.MapManager.setTheme(light ? 'light' : 'dark');
