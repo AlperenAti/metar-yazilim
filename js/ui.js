@@ -175,6 +175,12 @@
         setTab('weather');
         airportPanel.classList.add('open');
         airportPanel.setAttribute('aria-hidden', 'false');
+        
+        // Auto-collapse dashboard on mobile for better visibility
+        if (window.innerWidth <= 720) {
+            dashboard.classList.add('collapsed');
+        }
+
         if (focusMap) window.MapManager.focusAirport(airport);
         const url = new URL(window.location.href);
         url.searchParams.set('icao', airport.icao);
@@ -315,6 +321,7 @@
             }
             openAirport(airport, true);
             searchInput.value = '';
+            searchInput.blur();
         });
         ['altitude-filter', 'callsign-filter', 'emergency-filter'].forEach(id => $(id).addEventListener('input', () => {
             updateAltitudeLabel();
