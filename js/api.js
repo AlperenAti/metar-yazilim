@@ -7,7 +7,7 @@
  * because the official endpoint does not grant browsers CORS access directly.
  */
 (function () {
-    const WEATHER_API = '/api/weather';
+    const WEATHER_API = 'https://metar.vatsim.net/metar.php?id=';
     const AIRCRAFT_API = 'https://api.airplanes.live/v2';
 
     async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
@@ -30,58 +30,82 @@
         }
     }
 
-    function normalizeFlightCategory(category, metar) {
-        if (category && ['VFR', 'MVFR', 'IFR', 'LIFR'].includes(category)) return category;
-        if (/\b(VV|OVC00|BKN00|OVC0[0-4]|BKN0[0-4])/.test(metar || '')) return 'IFR';
-        return 'VFR';
-    }
-
-    function normalizeMetar(report) {
-        if (!report) return null;
-        const raw = report.rawOb || report.raw_text || report.raw || '';
-        const windDirection = report.wdir === 'VRB' || report.wdir === 0 || report.wdir === null
-            ? 'VRB'
-            : (Number.isFinite(Number(report.wdir)) ? String(report.wdir).padStart(3, '0') + '°' : '—');
-        const windSpeed = Number.isFinite(Number(report.wspd)) ? `${report.wspd} kt` : '—';
-        const gust = Number.isFinite(Number(report.wgst)) ? ` G${report.wgst}` : '';
-        const rawVisibility = String(report.visib ?? '').trim();
-        const visibility = !rawVisibility
-            ? '—'
-            : `${rawVisibility} ${Number(rawVisibility) < 20 || rawVisibility.includes('+') ? 'SM' : 'm'}`;
-
-        return {
-            raw,
-            issued: report.reportTime || report.obsTime || report.obs_time || null,
-            category: normalizeFlightCategory(report.fltCat, raw),
-            temperature: Number.isFinite(Number(report.temp)) ? Math.round(Number(report.temp)) : null,
-            dewpoint: Number.isFinite(Number(report.dewp)) ? Math.round(Number(report.dewp)) : null,
-            altimeter: Number.isFinite(Number(report.altim)) ? Math.round(Number(report.altim)) : null,
-            visibility,
-            wind: `${windDirection} / ${windSpeed}${gust}`,
-            windDirection: Number.isFinite(Number(report.wdir)) ? Number(report.wdir) : null,
-            windSpeed: Number.isFinite(Number(report.wspd)) ? Number(report.wspd) : null,
-            weather: report.wxString || report.wx_string || report.cover || 'Belirgin hadise yok'
-        };
-    }
-
     async function fetchAirportWeather(icao) {
         const id = encodeURIComponent(icao.trim().toUpperCase());
-        const [metarResult, tafResult] = await Promise.allSettled([
-            fetchWithTimeout(`${WEATHER_API}/metar?ids=${id}&format=json`).then(response => response.json()),
-            fetchWithTimeout(`${WEATHER_API}/taf?ids=${id}&format=json`).then(response => response.json())
-        ]);
+        
+        try {
+            const response = await fetchWithTimeout(`${WEATHER_API}${id}`);
+            const rawText = await response.text();
+            
+            if (!rawText || rawText.trim() === '') {
+                throw new Error('Havalimanı için veri bulunamadı.');
+            }
 
-        const metarList = metarResult.status === 'fulfilled' ? metarResult.value : [];
-        const tafList = tafResult.status === 'fulfilled' ? tafResult.value : [];
-        const metar = Array.isArray(metarList) ? metarList[0] : null;
-        const taf = Array.isArray(tafList) ? tafList[0] : null;
+            return {
+                metar: parseRawMetar(rawText.trim()),
+                taf: 'Bu sürümde TAF yayını doğrudan çekilmemektedir.',
+                tafUnavailable: true
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
 
-        if (!metar && metarResult.status === 'rejected') throw metarResult.reason;
+    function parseRawMetar(raw) {
+        if (!raw) return null;
+        
+        const windMatch = raw.match(/\b(\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?KT\b/);
+        let windDirection = null, windSpeed = null, gust = '';
+        if (windMatch) {
+            windDirection = windMatch[1] === 'VRB' ? 'VRB' : Number(windMatch[1]);
+            windSpeed = Number(windMatch[2]);
+            gust = windMatch[3] ? ` G${windMatch[3]}` : '';
+        }
+
+        const tempMatch = raw.match(/\b(M?\d{2})\/(M?\d{2})?\b/);
+        let temp = null, dewp = null;
+        if (tempMatch) {
+            temp = parseInt(tempMatch[1].replace('M', '-'), 10);
+            if (tempMatch[2]) dewp = parseInt(tempMatch[2].replace('M', '-'), 10);
+        }
+
+        const altMatch = raw.match(/\b([QA])(\d{4})\b/);
+        let altim = null;
+        if (altMatch) {
+            altim = altMatch[1] === 'Q' ? Number(altMatch[2]) : Math.round(Number(altMatch[2]) * 0.338639);
+        }
+
+        const visMatch = raw.match(/\b(\d{4}|\d{1,2}SM)\b/);
+        let visibility = '—';
+        if (visMatch) {
+            visibility = visMatch[1].includes('SM') ? visMatch[1] : (visMatch[1] === '9999' ? '10 km+' : `${visMatch[1]} m`);
+        }
+        if (raw.includes('CAVOK')) visibility = 'CAVOK (10 km+)';
+
+        let category = 'VFR';
+        if (raw.match(/\b(VV|OVC|BKN)0[0-2]\d\b/)) category = 'IFR';
+        else if (raw.match(/\b(OVC|BKN)0[3-9]\d\b/)) category = 'MVFR';
+
+        let issued = null;
+        const timeMatch = raw.match(/\b\d{2}(\d{2})(\d{2})Z\b/);
+        if (timeMatch) {
+            const d = new Date();
+            d.setUTCHours(Number(timeMatch[1]), Number(timeMatch[2]), 0, 0);
+            issued = d.toISOString();
+        }
 
         return {
-            metar: normalizeMetar(metar),
-            taf: taf?.rawTAF || taf?.raw_text || taf?.raw || null,
-            tafUnavailable: tafResult.status === 'rejected'
+            raw: raw,
+            issued: issued,
+            category: category,
+            temperature: temp,
+            dewpoint: dewp,
+            altimeter: altim,
+            visibility: visibility,
+            wind: windDirection !== null && windSpeed !== null ? `${windDirection === 'VRB' ? 'VRB' : String(windDirection).padStart(3, '0') + '°'} / ${windSpeed} kt${gust}` : '—',
+            windDirection: windDirection === 'VRB' ? null : windDirection,
+            windSpeed: windSpeed,
+            weather: raw.includes('CAVOK') ? 'Bulutsuz ve Görüş Açık (CAVOK)' : 'Belirtilmedi'
         };
     }
 
