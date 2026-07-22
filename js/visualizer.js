@@ -36,20 +36,68 @@
         ctx.save();
         ctx.translate(center, center);
         ctx.rotate((heading * Math.PI) / 180);
-        ctx.fillStyle = '#526577';
-        ctx.fillRect(-11, -76, 22, 152);
-        ctx.strokeStyle = '#e7f0f8';
+        
+        const rwWidth = 36;
+        const rwHeight = 180;
+
+        // Pavement
+        ctx.fillStyle = '#3a4454';
+        ctx.fillRect(-rwWidth / 2, -rwHeight / 2, rwWidth, rwHeight);
+        ctx.strokeStyle = '#2b3441';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-rwWidth / 2, -rwHeight / 2, rwWidth, rwHeight);
+
+        // Centerline
+        ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 1.5;
-        ctx.setLineDash([7, 7]);
+        ctx.setLineDash([12, 14]);
         ctx.beginPath();
-        ctx.moveTo(0, -65); ctx.lineTo(0, 65);
+        ctx.moveTo(0, -rwHeight / 2 + 75);
+        ctx.lineTo(0, rwHeight / 2 - 75);
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.fillStyle = '#b9cad9';
-        ctx.font = '500 10px "DM Mono"';
-        ctx.textAlign = 'center';
-        ctx.fillText(String(Math.round(heading / 10)).padStart(2, '0'), 0, -83);
-        ctx.fillText(String(Math.round(((heading + 180) % 360) / 10)).padStart(2, '0'), 0, 91);
+
+        ctx.fillStyle = '#ffffff';
+
+        function drawEnd(yOffset, num, isTop) {
+            ctx.save();
+            ctx.translate(0, yOffset);
+            if (isTop) ctx.rotate(Math.PI);
+            
+            // Threshold "piano keys"
+            const keyWidth = 2.5;
+            const keyHeight = 12;
+            const keySpacing = 4.5;
+            const numKeys = 3;
+            for (let i = 0; i < numKeys; i++) {
+                ctx.fillRect(4 + i * keySpacing, -keyHeight - 2, keyWidth, keyHeight);
+                ctx.fillRect(-4 - keyWidth - i * keySpacing, -keyHeight - 2, keyWidth, keyHeight);
+            }
+            
+            // Touchdown zone blocks (Aiming point)
+            ctx.fillRect(6, -keyHeight - 52, 6, 22);
+            ctx.fillRect(-12, -keyHeight - 52, 6, 22);
+
+            // Runway Designation Number
+            ctx.font = '900 16px "Arial", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.save();
+            ctx.scale(1, 1.5); // Vertical stretch for perspective
+            ctx.fillText(num, 0, (-keyHeight - 24) / 1.5);
+            ctx.restore();
+
+            ctx.restore();
+        }
+
+        // Primary approach end (Bottom of the rectangle for the current heading)
+        const numPrimary = String(Math.round(heading / 10) || 36).padStart(2, '0');
+        drawEnd(rwHeight / 2, numPrimary, false);
+        
+        // Secondary approach end (Top of the rectangle)
+        const numSecondary = String(Math.round(((heading + 180) % 360) / 10) || 36).padStart(2, '0');
+        drawEnd(-rwHeight / 2, numSecondary, true);
+        
         ctx.restore();
     }
 
