@@ -254,8 +254,7 @@
     function applyLayerVisibility() {
         const settings = {
             aircrafts: $('layer-aircraft').checked,
-            airports: $('layer-airports').checked,
-            firs: $('layer-firs').checked
+            airports: $('layer-airports').checked
         };
         window.MapManager.setLayerVisibility(settings);
         window.localStorage.setItem('metar-layers', JSON.stringify(settings));
@@ -293,7 +292,6 @@
             if (savedLayers) {
                 $('layer-aircraft').checked = savedLayers.aircrafts !== false;
                 $('layer-airports').checked = savedLayers.airports !== false;
-                $('layer-firs').checked = savedLayers.firs !== false;
             }
         } catch { /* Invalid local preference: use visible layers. */ }
         applyLayerVisibility();
@@ -327,7 +325,7 @@
             updateAltitudeLabel();
             window.App?.applyFilters();
         }));
-        ['layer-aircraft', 'layer-airports', 'layer-firs'].forEach(id => $(id).addEventListener('change', applyLayerVisibility));
+        ['layer-aircraft', 'layer-airports'].forEach(id => $(id).addEventListener('change', applyLayerVisibility));
         updateAltitudeLabel();
         const icao = new URLSearchParams(window.location.search).get('icao');
         if (icao) {

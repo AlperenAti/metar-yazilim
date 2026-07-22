@@ -21,5 +21,4 @@ Ardından [http://localhost:3000](http://localhost:3000) adresini açın.
 1. **Hava Trafiği (ADS-B):** [airplanes.live](https://airplanes.live) küresel ADS-B ağından anlık olarak (her 30 saniyede bir) çekilir. Uygulama tüm trafik tamamen gerçektir.
 2. **Hava Durumu (METAR/TAF):** Resmi kaynaklardan (Aviation Weather Center) sağlanan gerçek hava durumu bültenleridir.
 3. **Meydan ve Pist Bilgileri:** Küresel Açık Harita (OpenStreetMap / Overpass) kaynaklı güncel navigasyon altyapısıdır.
-- FIR çizgileri: DHMİ AIP ENR 2.1'de yayınlanan LTAA Ankara ve LTBB İstanbul FIR koordinatlarına dayalı görsel referans katmanıdır. Operasyonel seyrüsefer veya sınır tespiti için kullanılmaz; AIRAC değişikliklerinde güncellenmelidir.
 - Uygulama uçuş takip veya operasyonel karar verme aracı değildir.

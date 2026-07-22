@@ -12,7 +12,6 @@
 
     const airportLayer = L.layerGroup().addTo(map);
     const aircraftLayer = L.layerGroup().addTo(map);
-    const firLayer = L.layerGroup().addTo(map);
     const airports = [
         { icao: 'LTFM', name: 'İstanbul Havalimanı', lat: 41.259, lon: 28.742, runwayHeading: 350 },
         { icao: 'LTFJ', name: 'Sabiha Gökçen Havalimanı', lat: 40.898, lon: 29.309, runwayHeading: 60 },
@@ -62,43 +61,7 @@
         return hemisphere === 'S' || hemisphere === 'W' ? -decimal : decimal;
     }
 
-    function firPoint(latitude, longitude) {
-        return [dmsToDecimal(latitude), dmsToDecimal(longitude)];
-    }
 
-    // DHMİ AIP ENR 2.1 publishes these FIR boundary reference coordinates.
-    // Border-following sections are deliberately not fabricated as straight lines.
-    const firReferences = [
-        {
-            code: 'LTAA',
-            label: 'ANKARA FIR',
-            labelPoint: [40.05, 35.35],
-            points: [
-                firPoint('360456N', '0295958E'), firPoint('385956N', '0295958E'), firPoint('392956N', '0305958E'),
-                firPoint('424756N', '0305958E'), firPoint('424756N', '0315958E'), firPoint('424656N', '0335958E'),
-                firPoint('424356N', '0361559E'), firPoint('424056N', '0374259E'), firPoint('415356N', '0401959E'),
-                firPoint('413556N', '0411659E'), firPoint('413056N', '0413259E')
-            ]
-        },
-        {
-            code: 'LTBB',
-            label: 'İSTANBUL FIR',
-            labelPoint: [40.55, 28.05],
-            points: [
-                firPoint('415900N', '0280200E'), firPoint('415900N', '0281900E'), firPoint('420700N', '0290000E'),
-                firPoint('424755N', '0304513E'), firPoint('424756N', '0305958E'), firPoint('392956N', '0305958E'),
-                firPoint('385956N', '0295958E'), firPoint('360456N', '0295958E')
-            ]
-        }
-    ];
-
-    firReferences.forEach(fir => {
-        L.polyline(fir.points, { color: '#b7c1cc', weight: 1.25, opacity: .48, dashArray: '7 9', lineCap: 'butt', interactive: false }).addTo(firLayer);
-        L.marker(fir.labelPoint, {
-            interactive: false,
-            icon: L.divIcon({ className: '', html: `<span class="fir-label">${fir.code} · ${fir.label}</span>`, iconSize: [118, 16], iconAnchor: [59, 8] })
-        }).addTo(firLayer);
-    });
 
     function aircraftIcon(aircraft) {
         const turn = Number.isFinite(aircraft.heading) ? aircraft.heading : 0;
@@ -166,11 +129,10 @@
             map.flyTo([airport.lat, airport.lon], zoom, { duration: .7 });
         },
         focusFlight,
-        setLayerVisibility({ aircrafts, airports: airportsVisible, firs }) {
+        setLayerVisibility({ aircrafts, airports: airportsVisible }) {
             const layers = [
                 [aircraftLayer, aircrafts],
-                [airportLayer, airportsVisible],
-                [firLayer, firs]
+                [airportLayer, airportsVisible]
             ];
             layers.forEach(([layer, visible]) => {
                 if (visible && !map.hasLayer(layer)) map.addLayer(layer);
