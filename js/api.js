@@ -8,6 +8,8 @@
  */
 (function () {
     const WEATHER_API = 'https://metar.vatsim.net/metar.php?id=';
+    const TAF_API = 'https://aviationweather.gov/api/data/taf?ids=';
+    const PROXY_URL = 'https://api.allorigins.win/raw?url=';
     const AIRCRAFT_API = 'https://api.airplanes.live/v2';
 
     async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
@@ -33,22 +35,40 @@
     async function fetchAirportWeather(icao) {
         const id = encodeURIComponent(icao.trim().toUpperCase());
         
+        let metarText = '';
+        let tafText = null;
+        let tafUnavailable = true;
+
         try {
-            const response = await fetchWithTimeout(`${WEATHER_API}${id}`);
-            const rawText = await response.text();
+            // METAR'ı doğrudan CORS destekli VATSIM üzerinden çekiyoruz (En kararlı yöntem)
+            const metarResponse = await fetchWithTimeout(`${WEATHER_API}${id}`);
+            metarText = await metarResponse.text();
             
-            if (!rawText || rawText.trim() === '') {
+            if (!metarText || metarText.trim() === '') {
                 throw new Error('Havalimanı için veri bulunamadı.');
             }
-
-            return {
-                metar: parseRawMetar(rawText.trim()),
-                taf: 'Bu sürümde TAF yayını doğrudan çekilmemektedir.',
-                tafUnavailable: true
-            };
         } catch (error) {
             throw error;
         }
+
+        try {
+            // TAF için AviationWeather resmi uç noktasını bir CORS Proxy üzerinden çekmeyi deniyoruz
+            const targetUrl = encodeURIComponent(`${TAF_API}${id}`);
+            const tafResponse = await fetchWithTimeout(`${PROXY_URL}${targetUrl}`, {}, 8000);
+            const rawTaf = await tafResponse.text();
+            if (rawTaf && rawTaf.trim() !== '') {
+                tafText = rawTaf.trim();
+                tafUnavailable = false;
+            }
+        } catch (e) {
+            tafText = 'TAF verisine ulaşılamadı (Bağlantı veya proxy hatası).';
+        }
+
+        return {
+            metar: parseRawMetar(metarText.trim()),
+            taf: tafText,
+            tafUnavailable: tafUnavailable
+        };
     }
 
     function parseRawMetar(raw) {
