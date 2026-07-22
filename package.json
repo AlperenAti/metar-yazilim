@@ -1,0 +1,12 @@
+{
+  "name": "metar-airspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gerçek dünya ADS-B ve resmî METAR/TAF dashboard'u",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

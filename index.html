@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#07111d">
+    <title>METAR Airspace | Canlı Hava Sahası</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header" aria-label="Ana menü">
+        <a class="brand" href="./" aria-label="METAR Airspace ana sayfa">
+            <span class="brand-mark" aria-hidden="true">M</span>
+            <span><strong>METAR</strong><small>AIRSPACE</small></span>
+        </a>
+
+        <div class="live-pill" title="Uçak konumları 30 saniyede bir güncellenir">
+            <i></i><span>CANLI</span><time id="last-updated">Bağlanıyor</time>
+        </div>
+
+        <form id="search-form" class="search-box" role="search">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"></circle><path d="m20 20-4.2-4.2"></path></svg>
+            <input id="search-input" list="airport-options" autocomplete="off" maxlength="48" placeholder="ICAO veya havalimanı ara">
+            <datalist id="airport-options"></datalist>
+            <kbd>↵</kbd>
+        </form>
+
+        <div class="header-actions">
+            <button id="refresh-map-btn" class="icon-button" type="button" aria-label="Canlı hava sahasını yenile" title="Canlı hava sahasını yenile">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"></path></svg>
+            </button>
+            <button id="theme-btn" class="icon-button" type="button" aria-label="Açık temaya geç" title="Temayı değiştir">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <div id="map" aria-label="Canlı hava sahası haritası"></div>
+
+        <aside id="dashboard" class="dashboard glass-panel" aria-label="Hava sahası kontrol paneli">
+            <div class="panel-heading">
+                <div>
+                    <span class="eyebrow">TÜRKİYE BÖLGESİ</span>
+                    <h1>Hava sahası</h1>
+                </div>
+                <button id="dashboard-toggle" class="panel-toggle" type="button" aria-label="Kontrol panelini daralt">‹</button>
+            </div>
+
+            <div class="stat-grid" aria-label="Canlı özet">
+                <div class="stat-card"><span>Görünen uçak</span><strong id="aircraft-count">—</strong><small id="aircraft-subtitle">Yükleniyor</small></div>
+                <div class="stat-card"><span>Aktif acil durum</span><strong id="emergency-count">—</strong><small>7700 kodu</small></div>
+                <div class="stat-card"><span>İzlenen meydan</span><strong id="airport-count">—</strong><small>METAR destekli</small></div>
+                <div class="stat-card"><span>Güncelleme</span><strong id="refresh-interval">30 sn</strong><small>ADS-B yayını</small></div>
+            </div>
+
+            <section class="dashboard-section layer-section" aria-labelledby="layers-title">
+                <div class="section-title"><h2 id="layers-title">Katmanlar</h2><span>Harita görünümü</span></div>
+                <div class="layer-switches">
+                    <label class="layer-switch"><input id="layer-aircraft" type="checkbox" checked><span><i class="layer-dot aircraft-dot"></i>Uçaklar</span></label>
+                    <label class="layer-switch"><input id="layer-airports" type="checkbox" checked><span><i class="layer-dot airport-dot"></i>Meydanlar</span></label>
+                    <label class="layer-switch"><input id="layer-firs" type="checkbox" checked><span><i class="layer-dot fir-dot"></i>FIR sınırları</span></label>
+                </div>
+            </section>
+
+            <section class="dashboard-section" aria-labelledby="filters-title">
+                <div class="section-title"><h2 id="filters-title">Görüntüleme</h2><span id="filter-altitude-label">Tümü</span></div>
+                <label class="range-label" for="altitude-filter">Maksimum irtifa</label>
+                <input id="altitude-filter" type="range" min="0" max="45000" step="5000" value="45000">
+                <div class="range-ticks"><span>0 ft</span><span>45.000 ft</span></div>
+                <label class="toggle-row"><span>Yalnızca çağrı adı olanlar</span><input id="callsign-filter" type="checkbox"><i></i></label>
+                <label class="toggle-row"><span>Acil durum kodlarını öne çıkar</span><input id="emergency-filter" type="checkbox" checked><i></i></label>
+            </section>
+
+            <section class="dashboard-section flights-section" aria-labelledby="flights-title">
+                <div class="section-title"><h2 id="flights-title">Yakındaki uçuşlar</h2><button id="clear-selection-btn" class="text-button" type="button">Seçimi kaldır</button></div>
+                <div id="live-flight-list" class="live-flight-list" aria-live="polite">
+                    <p class="empty-state">Canlı ADS-B akışı bekleniyor…</p>
+                </div>
+            </section>
+
+            <footer class="source-note">
+                <span>Veri kaynakları</span>
+                <a href="https://www.aviationweather.gov/" target="_blank" rel="noopener">Aviation Weather</a>
+                <b>·</b>
+                <a href="https://airplanes.live/" target="_blank" rel="noopener">airplanes.live</a>
+                <b>·</b>
+                <a href="https://www.dhmi.gov.tr/AIPDocuments/LT_ENR_2_1_en.pdf" target="_blank" rel="noopener">DHMİ AIP</a>
+            </footer>
+        </aside>
+
+        <aside id="airport-panel" class="airport-panel" aria-hidden="true" aria-label="Havalimanı ayrıntıları">
+            <div class="airport-panel-header">
+                <div><span id="airport-region" class="eyebrow">TÜRKİYE</span><h2 id="apt-icao">ICAO</h2><p id="apt-name">Havalimanı</p></div>
+                <button id="close-airport-btn" class="close-button" type="button" aria-label="Havalimanı panelini kapat">×</button>
+            </div>
+
+            <nav class="panel-tabs" aria-label="Havalimanı bölümleri">
+                <button class="tab active" data-tab="weather" type="button">Hava durumu</button>
+                <button class="tab" data-tab="traffic" type="button">Yakındaki uçuşlar</button>
+                <button class="tab" data-tab="atis" type="button">D‑ATIS</button>
+            </nav>
+
+            <div class="panel-scroll">
+                <section id="tab-weather" class="tab-panel active">
+                    <div id="weather-status" class="data-status loading"><i></i> METAR getiriliyor…</div>
+                    <div class="flight-category-card">
+                        <div><span id="ws-fltcat" class="flight-category unknown">—</span><p id="ws-summary">Resmî hava raporu bekleniyor</p></div>
+                        <div class="weather-temperature"><span id="ws-temp">—</span><small>°C</small></div>
+                    </div>
+                    <div class="conditions-grid">
+                        <div><span>RÜZGAR</span><strong id="metar-wind">—</strong></div>
+                        <div><span>GÖRÜŞ</span><strong id="metar-vis">—</strong></div>
+                        <div><span>QNH</span><strong id="metar-qnh">—</strong></div>
+                        <div><span>ÇİĞ NOKTASI</span><strong id="metar-dewp">—</strong></div>
+                    </div>
+                    <div class="weather-block"><div class="block-heading"><h3>METAR</h3><button id="copy-metar" class="copy-button" type="button">Kopyala</button></div><code id="metar-raw">Veri bekleniyor…</code><p id="metar-issued" class="issued-time">—</p></div>
+                    <div class="weather-block taf-block"><div class="block-heading"><h3>TAF</h3><span>TAHMİN</span></div><code id="taf-raw">Veri bekleniyor…</code></div>
+                    <div class="wind-visualizer"><div class="block-heading"><h3>RÜZGAR / PİST</h3><span id="runway-label">—</span></div><canvas id="wind-canvas" width="260" height="260"></canvas><p>Şema, meydan referans pist başını gösterir; operasyonel aktif pist değildir.</p></div>
+                </section>
+
+                <section id="tab-traffic" class="tab-panel">
+                    <div class="data-status"><i></i><span id="airport-traffic-status">Havalimanı çevresindeki ADS‑B yayınları</span></div>
+                    <div id="airport-flight-list" class="airport-flight-list"><p class="empty-state">Bir havaalanı seçildiğinde yakınındaki gerçek yayınlar listelenir.</p></div>
+                </section>
+
+                <section id="tab-atis" class="tab-panel">
+                    <div class="atis-empty">
+                        <span class="atis-icon">⌁</span><h3>D‑ATIS kaynağı yapılandırılmadı</h3>
+                        <p>ATIS, dünya genelinde tek ve açık bir veri akışı değildir. Bu panel VATSIM simülasyon verisini gerçek ATIS gibi göstermez.</p>
+                        <p>Bir ANSP, havaalanı veya lisanslı D‑ATIS sağlayıcısının erişimini eklediğinde burada kaynak, zaman damgası ve ham mesaj görünür.</p>
+                    </div>
+                </section>
+            </div>
+
+            <div class="airport-actions">
+                <button id="focus-airport-btn" type="button">Haritada odakla</button>
+                <button id="refresh-airport-btn" type="button">Veriyi yenile</button>
+                <button id="copy-link-btn" type="button">Bağlantıyı kopyala</button>
+            </div>
+        </aside>
+
+        <div class="map-legend glass-panel"><span><i class="legend-airport"></i>METAR meydanı</span><span><i class="legend-aircraft"></i>ADS‑B uçak</span><span><i class="legend-alert"></i>7700</span></div>
+        <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="js/api.js"></script>
+    <script src="js/visualizer.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
