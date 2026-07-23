@@ -31,14 +31,28 @@
         const zoom = map.getZoom();
         
         let maxType = 3;
-        if (zoom < 7) maxType = 1;
-        else if (zoom < 9) maxType = 2;
+        let minRunwayFt = 0;
+        
+        if (zoom < 5) { maxType = 1; minRunwayFt = 10000; }
+        else if (zoom < 6) { maxType = 1; minRunwayFt = 8000; }
+        else if (zoom < 7) { maxType = 1; }
+        else if (zoom < 9) { maxType = 2; }
 
         const visibleIcaos = new Set();
         
         for (let i = 0; i < airports.length; i++) {
             const apt = airports[i];
             if (apt.t > maxType) continue;
+            
+            if (minRunwayFt > 0) {
+                let maxRwy = 0;
+                if (apt.runways) {
+                    for (let r = 0; r < apt.runways.length; r++) {
+                        if (apt.runways[r][2] > maxRwy) maxRwy = apt.runways[r][2];
+                    }
+                }
+                if (maxRwy < minRunwayFt) continue;
+            }
             
             if (bounds.contains([apt.lat, apt.lon])) {
                 visibleIcaos.add(apt.icao);
