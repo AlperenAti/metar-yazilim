@@ -185,13 +185,8 @@
         const regex = /\b(FM\d{6}|BECMG|TEMPO|PROB30\s+TEMPO|PROB40\s+TEMPO|PROB30|PROB40)\b/;
         const parts = flatTaf.split(regex);
 
-        // Keep only the initial part in the raw view to make it cleaner, if there are entries.
-        // Otherwise, it just shows the full TAF.
-        if (parts.length > 1) {
-            $('taf-raw').textContent = parts[0].trim();
-        } else {
-            $('taf-raw').textContent = tafText;
-        }
+        // Always show the full raw TAF string above the parsed entries
+        $('taf-raw').textContent = tafText;
 
         let entryCount = 1;
         for (let i = 1; i < parts.length; i += 2) {
