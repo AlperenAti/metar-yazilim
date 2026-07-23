@@ -25,10 +25,10 @@
     }
 
     function formatObservationTime(value) {
-        if (!value) return 'Gözlem saati yayınlanmadı';
+        if (!value) return 'Observation time not published';
         const date = new Date(value);
-        if (Number.isNaN(date.getTime())) return `Gözlem: ${value}`;
-        return `Gözlem: ${new Intl.DateTimeFormat('tr-TR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'UTC' }).format(date)} UTC`;
+        if (Number.isNaN(date.getTime())) return `Observed: ${value}`;
+        return `Observed: ${new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short', timeZone: 'UTC' }).format(date)} UTC`;
     }
 
     function runwayPair(heading) {
@@ -38,10 +38,10 @@
     }
 
     function flightPhase(flight) {
-        if (!Number.isFinite(flight.verticalRate)) return 'Dikey hız yok';
-        if (flight.verticalRate > 250) return 'Tırmanıyor';
-        if (flight.verticalRate < -250) return 'Alçalıyor';
-        return 'Düz uçuş';
+        if (!Number.isFinite(flight.verticalRate)) return 'No vertical rate';
+        if (flight.verticalRate > 250) return 'Climbing';
+        if (flight.verticalRate < -250) return 'Descending';
+        return 'Level flight';
     }
 
     function clearElement(element) {
@@ -53,15 +53,15 @@
         row.className = 'flight-row';
         row.tabIndex = 0;
         row.setAttribute('role', 'button');
-        row.setAttribute('aria-label', `${flight.callsign || flight.registration || 'Bilinmeyen uçak'} bilgisi`);
+        row.setAttribute('aria-label', `${flight.callsign || flight.registration || 'Unknown aircraft'} info`);
 
         const symbol = document.createElement('span');
-        symbol.className = `flight-symbol${flight.emergency ? ' alert' : ''}`;
-        symbol.textContent = flight.emergency ? '!' : '▲';
+        symbol.className = `flight-symbol`;
+        symbol.textContent = '▲';
 
         const identity = document.createElement('div');
         identity.className = 'flight-id';
-        identity.textContent = flight.callsign || flight.registration || flight.hex || 'Bilinmeyen';
+        identity.textContent = flight.callsign || flight.registration || flight.hex || 'Unknown';
         const secondary = document.createElement('small');
         secondary.textContent = options.distance ? `${options.distance.toFixed(1)} NM · ${flightPhase(flight)}` : (flight.type || flightPhase(flight));
         identity.appendChild(secondary);
@@ -70,7 +70,7 @@
         data.className = 'flight-data';
         data.textContent = flight.altitude === null ? '— ft' : `${formatNumber(flight.altitude)} ft`;
         const speed = document.createElement('small');
-        speed.textContent = `${flight.speed ?? '—'} kt${flight.emergency ? ' · 7700' : ''}`;
+        speed.textContent = `${flight.speed ?? '—'} kt`;
         data.appendChild(speed);
 
         row.append(symbol, identity, data);
@@ -91,7 +91,7 @@
         if (!flights.length) {
             const empty = document.createElement('p');
             empty.className = 'empty-state';
-            empty.textContent = options.emptyText || 'Bu alanda görünür ADS-B yayını yok.';
+            empty.textContent = options.emptyText || 'No visible ADS-B stream in this area.';
             element.appendChild(empty);
             return;
         }
@@ -105,18 +105,19 @@
 
     function resetWeather() {
         $('weather-status').className = 'data-status loading';
-        $('weather-status').replaceChildren(document.createElement('i'), document.createTextNode(' METAR getiriliyor…'));
+        $('weather-status').replaceChildren(document.createElement('i'), document.createTextNode(' Fetching METAR…'));
         $('ws-fltcat').textContent = '—';
         $('ws-fltcat').className = 'flight-category unknown';
-        $('ws-summary').textContent = 'Resmî hava raporu bekleniyor';
+        $('ws-summary').textContent = 'Awaiting official weather report';
         $('ws-temp').textContent = '—';
         $('metar-wind').textContent = '—';
         $('metar-vis').textContent = '—';
         $('metar-qnh').textContent = '—';
         $('metar-dewp').textContent = '—';
-        $('metar-raw').textContent = 'Veri bekleniyor…';
+        $('metar-raw').textContent = 'Waiting for data…';
         $('metar-issued').textContent = '—';
-        $('taf-raw').textContent = 'Veri bekleniyor…';
+        $('taf-raw').textContent = 'Waiting for data…';
+        clearElement($('taf-parsed'));
         metarText = '';
         window.Visualizer.clear();
     }
@@ -125,11 +126,11 @@
         const { metar, taf, tafUnavailable } = weather;
         const status = $('weather-status');
         status.className = 'data-status';
-        status.replaceChildren(document.createElement('i'), document.createTextNode(metar ? ' Aviation Weather Center kaynağından güncel METAR' : ' Bu meydan için güncel METAR yok'));
+        status.replaceChildren(document.createElement('i'), document.createTextNode(metar ? ' Current METAR from Aviation Weather Center' : ' No current METAR for this airport'));
 
         if (!metar) {
-            $('metar-raw').textContent = 'Bu ICAO için Aviation Weather Center güncel METAR döndürmedi.';
-            $('taf-raw').textContent = tafUnavailable ? 'TAF kaynağına ulaşılamadı.' : 'Yayınlanmış TAF yok.';
+            $('metar-raw').textContent = 'Aviation Weather Center did not return a current METAR for this ICAO.';
+            $('taf-raw').textContent = tafUnavailable ? 'TAF source unreachable.' : 'No published TAF.';
             return;
         }
 
@@ -142,10 +143,69 @@
         $('metar-vis').textContent = metar.visibility;
         $('metar-qnh').textContent = metar.altimeter === null ? '—' : `${metar.altimeter} hPa`;
         $('metar-dewp').textContent = metar.dewpoint === null ? '—' : `${metar.dewpoint} °C`;
-        $('metar-raw').textContent = metar.raw || 'Ham METAR metni yayınlanmadı.';
+        $('metar-raw').textContent = metar.raw || 'Raw METAR text not published.';
         $('metar-issued').textContent = formatObservationTime(metar.issued);
-        $('taf-raw').textContent = taf || (tafUnavailable ? 'TAF kaynağına ulaşılamadı.' : 'Bu meydan için yayınlanmış TAF yok.');
+        $('taf-raw').textContent = taf || (tafUnavailable ? 'TAF source unreachable.' : 'No published TAF for this airport.');
+        
+        renderTafParsed(taf, tafUnavailable);
+        
         window.Visualizer.drawRunwayAndWind(selectedAirport.runwayHeading, metar.windDirection, metar.windSpeed);
+    }
+
+    function renderTafParsed(tafText, tafUnavailable) {
+        const container = $('taf-parsed');
+        clearElement(container);
+        if (!tafText || tafUnavailable) return;
+
+        const flatTaf = tafText.replace(/\s+/g, ' ');
+        const regex = /\b(FM\d{6}|BECMG|TEMPO|PROB30\s+TEMPO|PROB40\s+TEMPO|PROB30|PROB40)\b/;
+        const parts = flatTaf.split(regex);
+
+        // Keep only the initial part in the raw view to make it cleaner, if there are entries.
+        // Otherwise, it just shows the full TAF.
+        if (parts.length > 1) {
+            $('taf-raw').textContent = parts[0].trim();
+        } else {
+            $('taf-raw').textContent = tafText;
+        }
+
+        let entryCount = 1;
+        for (let i = 1; i < parts.length; i += 2) {
+            const keyword = parts[i].trim();
+            const content = parts[i + 1] ? parts[i + 1].trim() : '';
+            
+            const entryDiv = document.createElement('div');
+            entryDiv.className = 'taf-entry';
+            
+            const header = document.createElement('div');
+            header.className = 'taf-entry-header';
+            
+            let prettyKeyword = keyword;
+            if (keyword.startsWith('FM')) {
+                const day = keyword.substring(2, 4);
+                const hour = keyword.substring(4, 6);
+                const min = keyword.substring(6, 8);
+                prettyKeyword = `FM (From Day ${day}, ${hour}:${min}Z)`;
+            } else if (keyword === 'BECMG') {
+                prettyKeyword = 'BECMG (Expected Change)';
+            } else if (keyword === 'TEMPO') {
+                prettyKeyword = 'TEMPO (Temporary Change)';
+            } else if (keyword.includes('PROB')) {
+                prettyKeyword = keyword + ' (Probability)';
+            }
+            
+            header.textContent = `Entry #${entryCount} · ${prettyKeyword}`;
+            
+            const body = document.createElement('div');
+            body.className = 'taf-entry-body';
+            body.textContent = `${keyword} ${content}`.trim();
+            
+            entryDiv.appendChild(header);
+            entryDiv.appendChild(body);
+            container.appendChild(entryDiv);
+            
+            entryCount++;
+        }
     }
 
     async function refreshAirportWeather() {
@@ -160,9 +220,9 @@
             if (requestId !== weatherRequestId) return;
             const status = $('weather-status');
             status.className = 'data-status';
-            status.replaceChildren(document.createElement('i'), document.createTextNode(` METAR alınamadı: ${error.message}`));
-            $('metar-raw').textContent = 'Bağlantı düzeldiğinde “Veriyi yenile” düğmesini kullanın.';
-            $('taf-raw').textContent = 'METAR isteği başarısız olduğu için TAF gösterilemedi.';
+            status.replaceChildren(document.createElement('i'), document.createTextNode(` Failed to fetch METAR: ${error.message}`));
+            $('metar-raw').textContent = 'Use "Refresh data" button when connection is restored.';
+            $('taf-raw').textContent = 'TAF could not be displayed due to METAR request failure.';
         }
     }
 
@@ -170,8 +230,8 @@
         selectedAirport = airport;
         $('apt-icao').textContent = airport.icao;
         $('apt-name').textContent = airport.name;
-        $('runway-label').textContent = `Referans RWY ${runwayPair(airport.runwayHeading)}`;
-        $('airport-region').textContent = 'TÜRKİYE · GERÇEK VERİ';
+        $('runway-label').textContent = `Reference RWY ${runwayPair(airport.runwayHeading)}`;
+        $('airport-region').textContent = 'TURKEY · REAL DATA';
         setTab('weather');
         airportPanel.classList.add('open');
         airportPanel.setAttribute('aria-hidden', 'false');
@@ -187,6 +247,7 @@
         window.history.replaceState({}, '', url);
         refreshAirportWeather();
         window.App?.refreshAirportTraffic(airport);
+        window.NotamManager?.loadForAirport(airport.icao);
     }
 
     function closeAirport() {
@@ -197,13 +258,12 @@
         window.history.replaceState({}, '', url);
     }
 
-    function renderAirspace(flights, totalBeforeFiltering, totalEmergency) {
+    function renderAirspace(flights, totalBeforeFiltering) {
         $('aircraft-count').textContent = formatNumber(flights.length);
-        $('aircraft-subtitle').textContent = totalBeforeFiltering === flights.length ? 'ADS-B yayını' : `${formatNumber(totalBeforeFiltering)} yayından süzüldü`;
-        $('emergency-count').textContent = formatNumber(totalEmergency);
+        $('aircraft-subtitle').textContent = `of ${formatNumber(totalBeforeFiltering)} live`;
         $('airport-count').textContent = formatNumber(window.MapManager.airports.length);
-        $('last-updated').textContent = new Intl.DateTimeFormat('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date());
-        renderFlightList($('live-flight-list'), flights, { limit: 10, emptyText: 'Seçili filtrelerde görünür ADS-B yayını yok.' });
+        $('last-updated').textContent = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date());
+        renderFlightList($('live-flight-list'), flights, { limit: 10, emptyText: 'No visible ADS-B stream with selected filters.' });
     }
 
     function renderAirportTraffic(flights, airport = selectedAirport) {
@@ -211,20 +271,20 @@
         const nearby = flights.map(flight => ({ flight, distance: window.MapManager.distanceNm(airport, flight) }))
             .filter(item => item.distance <= 60)
             .sort((first, second) => first.distance - second.distance);
-        $('airport-traffic-status').textContent = `60 NM içindeki ${nearby.length} canlı ADS-B yayını`;
+        $('airport-traffic-status').textContent = `${nearby.length} live ADS-B streams within 60 NM`;
         renderFlightList($('airport-flight-list'), nearby.map(item => item.flight), {
             limit: 30,
-            emptyText: '60 NM içindeki görünür ADS-B yayını yok. Bu, havaalanında trafik olmadığı anlamına gelmeyebilir.',
+            emptyText: 'No visible ADS-B streams within 60 NM. This may not mean there is no traffic at the airport.',
             getOptions: flight => ({ distance: nearby.find(item => item.flight.hex === flight.hex)?.distance })
         });
     }
 
     function setAirportTrafficLoading() {
-        $('airport-traffic-status').textContent = 'Havalimanı çevresindeki yayınlar getiriliyor…';
+        $('airport-traffic-status').textContent = 'Fetching streams around airport…';
     }
 
     function setAirportTrafficError(message) {
-        $('airport-traffic-status').textContent = 'Canlı ADS-B verisi alınamadı';
+        $('airport-traffic-status').textContent = 'Failed to fetch live ADS-B data';
         clearElement($('airport-flight-list'));
         const empty = document.createElement('p');
         empty.className = 'empty-state';
@@ -235,38 +295,38 @@
     function getFilters() {
         return {
             maxAltitude: Number($('altitude-filter').value),
-            callsignOnly: $('callsign-filter').checked,
-            highlightEmergency: $('emergency-filter').checked
+            callsignOnly: $('callsign-filter').checked
         };
     }
 
     function updateAltitudeLabel() {
         const value = Number($('altitude-filter').value);
-        $('filter-altitude-label').textContent = value >= 45000 ? 'Tümü' : `${formatNumber(value)} ft altı`;
+        $('filter-altitude-label').textContent = value >= 45000 ? 'All' : `Under ${formatNumber(value)} ft`;
     }
 
     function showFlight(flight) {
         window.MapManager.focusFlight(flight);
-        const description = `${flight.callsign || flight.registration || flight.hex || 'Bilinmeyen'} · ${flight.altitude ?? '—'} ft · ${flight.speed ?? '—'} kt${flight.emergency ? ' · ACİL DURUM 7700' : ''}`;
-        showToast(description, flight.emergency ? 'error' : '');
+        const description = `${flight.callsign || flight.registration || flight.hex || 'Unknown'} · ${flight.altitude ?? '—'} ft · ${flight.speed ?? '—'} kt`;
+        showToast(description);
     }
 
     function applyLayerVisibility() {
         const settings = {
             aircrafts: $('layer-aircraft').checked,
-            airports: $('layer-airports').checked
+            airports: $('layer-airports').checked,
+            sigmets: $('layer-sigmet').checked
         };
         window.MapManager.setLayerVisibility(settings);
         window.localStorage.setItem('metar-layers', JSON.stringify(settings));
     }
 
     async function copyText(value, success) {
-        if (!value) { showToast('Kopyalanacak veri yok.', 'error'); return; }
+        if (!value) { showToast('No data to copy.', 'error'); return; }
         try {
             await navigator.clipboard.writeText(value);
             showToast(success);
         } catch {
-            showToast('Tarayıcı bu ortamda panoya erişim vermedi.', 'error');
+            showToast('Browser denied clipboard access in this environment.', 'error');
         }
     }
 
@@ -292,6 +352,7 @@
             if (savedLayers) {
                 $('layer-aircraft').checked = savedLayers.aircrafts !== false;
                 $('layer-airports').checked = savedLayers.airports !== false;
+                $('layer-sigmet').checked = savedLayers.sigmets === true; // Default off to reduce clutter
             }
         } catch { /* Invalid local preference: use visible layers. */ }
         applyLayerVisibility();
@@ -303,33 +364,48 @@
             const light = document.body.classList.toggle('light-mode');
             window.MapManager.setTheme(light ? 'light' : 'dark');
             window.localStorage.setItem('metar-theme', light ? 'light' : 'dark');
-            $('theme-btn').setAttribute('aria-label', light ? 'Koyu temaya geç' : 'Açık temaya geç');
+            $('theme-btn').setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
         });
         $('dashboard-toggle').addEventListener('click', () => dashboard.classList.toggle('collapsed'));
+        
+        $('weather-menu-btn').addEventListener('click', () => {
+            $('weather-menu-btn').classList.toggle('active');
+            $('weather-menu-panel').classList.toggle('hidden');
+        });
+        $('close-weather-menu').addEventListener('click', () => {
+            $('weather-menu-btn').classList.remove('active');
+            $('weather-menu-panel').classList.add('hidden');
+        });
+        document.getElementsByName('weather_layer').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.checked) window.MapManager.setWeatherOverlay(e.target.value);
+            });
+        });
+
         $('close-airport-btn').addEventListener('click', closeAirport);
         $('clear-selection-btn').addEventListener('click', closeAirport);
         $('focus-airport-btn').addEventListener('click', () => selectedAirport && window.MapManager.focusAirport(selectedAirport, 14));
         $('refresh-airport-btn').addEventListener('click', () => { refreshAirportWeather(); if (selectedAirport) window.App?.refreshAirportTraffic(selectedAirport); });
-        $('copy-link-btn').addEventListener('click', () => copyText(window.location.href, 'Havalimanı bağlantısı kopyalandı.'));
-        $('copy-metar').addEventListener('click', () => copyText(metarText, 'METAR panoya kopyalandı.'));
+        $('copy-link-btn').addEventListener('click', () => copyText(window.location.href, 'Airport link copied.'));
+        $('copy-metar').addEventListener('click', () => copyText(metarText, 'METAR copied to clipboard.'));
         $('refresh-map-btn').addEventListener('click', () => window.App?.refreshAirspace());
         tabs.forEach(tab => tab.addEventListener('click', () => setTab(tab.dataset.tab)));
         searchForm.addEventListener('submit', event => {
             event.preventDefault();
             const airport = window.MapManager.findAirport(searchInput.value);
             if (!airport) {
-                showToast('Bu sürümde haritada kayıtlı bir meydan bulunamadı. ICAO listeden seçilebilir.', 'error');
+                showToast('No airport found on the map in this version. ICAO can be selected from the list.', 'error');
                 return;
             }
             openAirport(airport, true);
             searchInput.value = '';
             searchInput.blur();
         });
-        ['altitude-filter', 'callsign-filter', 'emergency-filter'].forEach(id => $(id).addEventListener('input', () => {
+        ['altitude-filter', 'callsign-filter'].forEach(id => $(id).addEventListener('input', () => {
             updateAltitudeLabel();
             window.App?.applyFilters();
         }));
-        ['layer-aircraft', 'layer-airports'].forEach(id => $(id).addEventListener('change', applyLayerVisibility));
+        ['layer-aircraft', 'layer-airports', 'layer-sigmet'].forEach(id => $(id).addEventListener('change', applyLayerVisibility));
         updateAltitudeLabel();
         const icao = new URLSearchParams(window.location.search).get('icao');
         if (icao) {

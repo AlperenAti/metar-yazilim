@@ -7,9 +7,8 @@
  * because the official endpoint does not grant browsers CORS access directly.
  */
 (function () {
-    const WEATHER_API = 'https://metar.vatsim.net/metar.php?id=';
-    const TAF_API = 'https://aviationweather.gov/api/data/taf?ids=';
-    const PROXY_URL = 'https://api.allorigins.win/raw?url=';
+    const WEATHER_API = '/api/weather/metar?ids=';
+    const TAF_API = '/api/weather/taf?ids=';
     const AIRCRAFT_API = 'https://api.airplanes.live/v2';
 
     async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
@@ -19,12 +18,12 @@
         try {
             const response = await fetch(url, { ...options, signal: controller.signal });
             if (!response.ok) {
-                throw new Error(`Kaynak ${response.status} yanıtı verdi.`);
+                throw new Error(`Source responded with ${response.status}.`);
             }
             return response;
         } catch (error) {
             if (error.name === 'AbortError') {
-                throw new Error('Veri kaynağı zaman aşımına uğradı.');
+                throw new Error('Data source timed out.');
             }
             throw error;
         } finally {
@@ -40,28 +39,27 @@
         let tafUnavailable = true;
 
         try {
-            // METAR'ı doğrudan CORS destekli VATSIM üzerinden çekiyoruz (En kararlı yöntem)
+            // METAR'ı kendi yerel sunucumuz üzerinden en hızlı ve güvenilir kaynak olan NOAA'dan çekiyoruz
             const metarResponse = await fetchWithTimeout(`${WEATHER_API}${id}`);
             metarText = await metarResponse.text();
             
             if (!metarText || metarText.trim() === '') {
-                throw new Error('Havalimanı için veri bulunamadı.');
+                throw new Error('No data found for airport.');
             }
         } catch (error) {
             throw error;
         }
 
         try {
-            // TAF için AviationWeather resmi uç noktasını bir CORS Proxy üzerinden çekmeyi deniyoruz
-            const targetUrl = encodeURIComponent(`${TAF_API}${id}`);
-            const tafResponse = await fetchWithTimeout(`${PROXY_URL}${targetUrl}`, {}, 8000);
+            // TAF'ı da kendi yerel sunucumuz üzerinden NOAA'dan çekiyoruz, CORS sorunu veya 3. parti Proxy gecikmesi yok
+            const tafResponse = await fetchWithTimeout(`${TAF_API}${id}`, {}, 8000);
             const rawTaf = await tafResponse.text();
             if (rawTaf && rawTaf.trim() !== '') {
                 tafText = rawTaf.trim();
                 tafUnavailable = false;
             }
         } catch (e) {
-            tafText = 'Resmi TAF sunucularından doğrudan veri çekimi tarayıcı güvenliği (CORS) nedeniyle sağlanamıyor. (Proxy hatası)';
+            tafText = 'Failed to fetch TAF data via local server. Check your connection or server.';
         }
 
         return {
@@ -71,9 +69,29 @@
         };
     }
 
+    async function fetchBulkMetar(icaoList) {
+        if (!icaoList || icaoList.length === 0) return [];
+        // Max ~50-100 per request is usually fine.
+        const ids = icaoList.join(',');
+        try {
+            const response = await fetchWithTimeout(`${WEATHER_API}${ids}`);
+            const text = await response.text();
+            if (!text) return [];
+            
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 10);
+            return lines.map(line => parseRawMetar(line)).filter(Boolean);
+        } catch (error) {
+            console.error('Failed to fetch bulk METAR:', error);
+            return [];
+        }
+    }
+
     function parseRawMetar(raw) {
         if (!raw) return null;
         
+        const icaoMatch = raw.match(/\b([A-Z]{4})\b/);
+        const icao = icaoMatch ? icaoMatch[1] : null;
+
         const windMatch = raw.match(/\b(\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?KT\b/);
         let windDirection = null, windSpeed = null, gust = '';
         if (windMatch) {
@@ -115,6 +133,7 @@
         }
 
         return {
+            icao: icao,
             raw: raw,
             issued: issued,
             category: category,
@@ -125,7 +144,7 @@
             wind: windDirection !== null && windSpeed !== null ? `${windDirection === 'VRB' ? 'VRB' : String(windDirection).padStart(3, '0') + '°'} / ${windSpeed} kt${gust}` : '—',
             windDirection: windDirection === 'VRB' ? null : windDirection,
             windSpeed: windSpeed,
-            weather: raw.includes('CAVOK') ? 'Bulutsuz ve Görüş Açık (CAVOK)' : 'Belirtilmedi'
+            weather: raw.includes('CAVOK') ? 'Ceiling and Visibility OK (CAVOK)' : 'Unspecified'
         };
     }
 
@@ -160,5 +179,5 @@
         return Array.isArray(data.ac) ? data.ac.map(normalizeAircraft).filter(Boolean) : [];
     }
 
-    window.API = { fetchAirportWeather, fetchAircraftNear };
+    window.API = { fetchAirportWeather, fetchAircraftNear, fetchBulkMetar };
 }());

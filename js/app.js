@@ -16,7 +16,7 @@
         });
 
         window.MapManager.updateAircraftMarkers(filtered);
-        window.UI.renderAirspace(filtered, allAircraft.length, allAircraft.filter(aircraft => aircraft.emergency).length);
+        window.UI.renderAirspace(filtered, allAircraft.length);
         const selectedAirport = window.UI.getSelectedAirport();
         if (selectedAirport) window.UI.renderAirportTraffic(filtered, selectedAirport);
     }
