@@ -113,16 +113,42 @@
             altim = altMatch[1] === 'Q' ? Number(altMatch[2]) : Math.round(Number(altMatch[2]) * 0.338639);
         }
 
-        const visMatch = raw.match(/\b(\d{4}|\d{1,2}SM)\b/);
+        const visMatch = raw.match(/\b(\d{4}|\d{1,2}(?:\/\d)?SM)\b/);
         let visibility = '—';
-        if (visMatch) {
-            visibility = visMatch[1].includes('SM') ? visMatch[1] : (visMatch[1] === '9999' ? '10 km+' : `${visMatch[1]} m`);
+        let visMiles = 99;
+        
+        if (raw.includes('CAVOK')) {
+            visibility = 'CAVOK (10 km+)';
+            visMiles = 10;
+        } else if (visMatch) {
+            const v = visMatch[1];
+            if (v.includes('SM')) {
+                visibility = v;
+                if (v.includes('/')) {
+                    const parts = v.replace('SM', '').split('/');
+                    visMiles = Number(parts[0]) / Number(parts[1]);
+                } else {
+                    visMiles = parseFloat(v);
+                }
+            } else {
+                const meters = parseInt(v, 10);
+                visibility = meters === 9999 ? '10 km+' : `${meters} m`;
+                visMiles = meters / 1609.34;
+            }
         }
-        if (raw.includes('CAVOK')) visibility = 'CAVOK (10 km+)';
+
+        let ceilingFt = 99999;
+        if (!raw.includes('CAVOK')) {
+            const ceilingMatches = [...raw.matchAll(/\b(?:VV|OVC|BKN)(\d{3})\b/g)];
+            if (ceilingMatches.length > 0) {
+                ceilingFt = Math.min(...ceilingMatches.map(m => parseInt(m[1], 10) * 100));
+            }
+        }
 
         let category = 'VFR';
-        if (raw.match(/\b(VV|OVC|BKN)0[0-2]\d\b/)) category = 'IFR';
-        else if (raw.match(/\b(OVC|BKN)0[3-9]\d\b/)) category = 'MVFR';
+        if (ceilingFt < 500 || visMiles < 1) category = 'LIFR';
+        else if (ceilingFt < 1000 || visMiles < 3) category = 'IFR';
+        else if (ceilingFt <= 3000 || visMiles <= 5) category = 'MVFR';
 
         let issued = null;
         const timeMatch = raw.match(/\b\d{2}(\d{2})(\d{2})Z\b/);

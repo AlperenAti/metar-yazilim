@@ -40,7 +40,9 @@
     </header>
 
     <main>
-        <div id="map" aria-label="Live airspace map"></div>
+        <div id="map" aria-label="Live airspace map">
+            <div class="map-crosshair"></div>
+        </div>
 
         <div class="weather-controls">
             <button id="weather-menu-btn" class="map-control-btn" aria-label="Weather menu">
@@ -67,7 +69,7 @@
         <aside id="dashboard" class="dashboard glass-panel" aria-label="Airspace dashboard">
             <div class="panel-heading">
                 <div>
-                    <span class="eyebrow">TURKEY REGION</span>
+                    <span id="main-region" class="eyebrow">GLOBAL REGION</span>
                     <h1>Airspace</h1>
                 </div>
                 <button id="dashboard-toggle" class="panel-toggle" type="button" aria-label="Collapse dashboard">‹</button>
@@ -121,6 +123,7 @@
 
             <nav class="panel-tabs" aria-label="Airport sections">
                 <button data-tab="weather" class="tab active" type="button">Weather</button>
+                <button data-tab="atis" class="tab" type="button">ATIS</button>
                 <button data-tab="notam" class="tab" type="button">NOTAM</button>
                 <button data-tab="traffic" class="tab" type="button">Nearby flights</button>
             </nav>
@@ -141,6 +144,21 @@
                     <div class="weather-block"><div class="block-heading"><h3>METAR</h3><button id="copy-metar" class="copy-button" type="button">Copy</button></div><code id="metar-raw">Waiting for data…</code><p id="metar-issued" class="issued-time">—</p></div>
                     <div class="weather-block taf-block"><div class="block-heading"><h3>TAF</h3><span>FORECAST</span></div><code id="taf-raw">Waiting for data…</code><div id="taf-parsed" class="taf-parsed"></div></div>
                     <div class="wind-visualizer"><div class="block-heading"><h3>WIND / RUNWAY</h3><span id="runway-label">—</span></div><canvas id="wind-canvas" width="260" height="260"></canvas><p>Diagram shows the reference runway heading; not the operationally active runway.</p>
+                    </div>
+                </section>
+                
+                <section id="tab-atis" class="tab-panel" aria-labelledby="Synthetic ATIS">
+                    <div class="atis-container">
+                        <div class="atis-header">
+                            <h3>Synthetic ATIS</h3>
+                            <button id="play-atis-btn" class="btn-primary play-btn" type="button">
+                                <span class="icon">▶</span> Play Audio
+                            </button>
+                        </div>
+                        <div class="atis-text-box" id="atis-text">
+                            <p class="empty-state">Loading ATIS data...</p>
+                        </div>
+                        <p class="atis-disclaimer">This ATIS is synthesized automatically from METAR data for simulation and practice. Do not use for real world flight operations.</p>
                     </div>
                 </section>
                 
@@ -182,6 +200,7 @@
     <script src="js/visualizer.js"></script>
     <script src="js/sigmet.js"></script>
     <script src="js/notam.js"></script>
+    <script src="js/atis.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/map.js"></script>
     <script src="js/app.js"></script>

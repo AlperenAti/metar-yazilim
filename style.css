@@ -116,3 +116,20 @@ button { color: inherit; }
 
 .sigmet-tooltip { background: rgba(0,0,0,0.85); color: #fff; border: 1px solid #444; border-radius: 4px; padding: 4px 8px; font-size: 12px; font-weight: 600; box-shadow: 0 2px 10px rgba(0,0,0,0.5); border-left: 4px solid var(--brand); }
 .sigmet-popup { font-family: 'DM Mono', monospace; font-size: 11px; white-space: pre-wrap; background: #1a1a1a; color: #ddd; padding: 10px; border-radius: 4px; max-height: 250px; overflow-y: auto; line-height: 1.4; border: 1px solid #333; }
+
+/* ATIS Styles */
+.atis-container { display: flex; flex-direction: column; gap: 15px; }
+.atis-header { display: flex; justify-content: space-between; align-items: center; }
+.atis-header h3 { font-size: 14px; color: var(--accent); margin: 0; }
+.play-btn { background: rgba(0, 229, 255, 0.1); border: 1px solid var(--accent); color: var(--accent); padding: 6px 12px; border-radius: 4px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+.play-btn:hover { background: rgba(0, 229, 255, 0.2); }
+.play-btn.playing { background: rgba(255, 50, 50, 0.1); border-color: #ff3232; color: #ff3232; }
+.play-btn.playing:hover { background: rgba(255, 50, 50, 0.2); }
+.atis-text-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; font-family: monospace; font-size: 13px; line-height: 1.5; color: #e0e0e0; text-transform: uppercase; }
+.atis-disclaimer { font-size: 11px; color: var(--muted); text-align: center; font-style: italic; }
+
+/* Crosshair */
+.map-crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; pointer-events: none; z-index: 1000; opacity: 0.5; }
+.map-crosshair::before, .map-crosshair::after { content: ''; position: absolute; background: rgba(255, 255, 255, 0.8); }
+.map-crosshair::before { top: 50%; left: 0; right: 0; height: 2px; margin-top: -1px; }
+.map-crosshair::after { left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; }

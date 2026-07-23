@@ -17,43 +17,115 @@
     const aircraftLayer = L.layerGroup().addTo(map);
     const sigmetLayer = new window.SigmetLayer();
     
-    const airports = [
-        { icao: 'LTFM', name: 'İstanbul Havalimanı', lat: 41.259, lon: 28.742, runwayHeading: 350 },
-        { icao: 'LTFJ', name: 'Sabiha Gökçen Havalimanı', lat: 40.898, lon: 29.309, runwayHeading: 60 },
-        { icao: 'LTAC', name: 'Ankara Esenboğa Havalimanı', lat: 40.128, lon: 32.995, runwayHeading: 30 },
-        { icao: 'LTAI', name: 'Antalya Havalimanı', lat: 36.898, lon: 30.800, runwayHeading: 180 },
-        { icao: 'LTBJ', name: 'İzmir Adnan Menderes Havalimanı', lat: 38.292, lon: 27.156, runwayHeading: 160 },
-        { icao: 'LTAF', name: 'Adana Şakirpaşa Havalimanı', lat: 36.982, lon: 35.280, runwayHeading: 50 },
-        { icao: 'LTCG', name: 'Trabzon Havalimanı', lat: 40.995, lon: 39.789, runwayHeading: 110 },
-        { icao: 'LTBS', name: 'Dalaman Havalimanı', lat: 36.713, lon: 28.792, runwayHeading: 10 },
-        { icao: 'LTFE', name: 'Milas-Bodrum Havalimanı', lat: 37.250, lon: 27.664, runwayHeading: 100 },
-        { icao: 'LTCB', name: 'Ordu-Giresun Havalimanı', lat: 40.966, lon: 38.077, runwayHeading: 100 },
-        { icao: 'LTCE', name: 'Erzurum Havalimanı', lat: 39.956, lon: 41.170, runwayHeading: 80 },
-        { icao: 'LTCF', name: 'Kars Harakani Havalimanı', lat: 40.562, lon: 43.115, runwayHeading: 60 },
-        { icao: 'LTCC', name: 'Diyarbakır Havalimanı', lat: 37.893, lon: 41.116, runwayHeading: 160 },
-        { icao: 'LTCJ', name: 'Batman Havalimanı', lat: 37.929, lon: 41.116, runwayHeading: 10 },
-        { icao: 'LTCV', name: 'Şırnak Şerafettin Elçi Havalimanı', lat: 37.363, lon: 42.058, runwayHeading: 110 },
-        { icao: 'LTCP', name: 'Adıyaman Havalimanı', lat: 37.731, lon: 38.468, runwayHeading: 10 },
-        { icao: 'LTAL', name: 'Kastamonu Havalimanı', lat: 41.314, lon: 33.795, runwayHeading: 10 },
-        { icao: 'LTBZ', name: 'Zafer Havalimanı', lat: 39.111, lon: 30.129, runwayHeading: 10 },
-        { icao: 'LTBA', name: 'Atatürk Havalimanı', lat: 40.977, lon: 28.821, runwayHeading: 50 },
-        { icao: 'LTBU', name: 'Çorlu Atatürk Havalimanı', lat: 41.138, lon: 27.919, runwayHeading: 50 },
-        { icao: 'LTAU', name: 'Konya Havalimanı', lat: 37.980, lon: 32.562, runwayHeading: 10 },
-        { icao: 'LTAS', name: 'Zonguldak Çaycuma Havalimanı', lat: 41.506, lon: 32.089, runwayHeading: 90 },
-        { icao: 'LTAR', name: 'Sivas Nuri Demirağ Havalimanı', lat: 39.813, lon: 36.903, runwayHeading: 50 },
-        { icao: 'LTAP', name: 'Amasya Merzifon Havalimanı', lat: 40.829, lon: 35.522, runwayHeading: 50 }
-    ];
+    let airports = [];
+    const activeAirportMarkers = new Map();
 
     function airportIcon(icao) {
         return L.divIcon({ className: '', html: `<div class="airport-marker"><span>${icao}</span></div>`, iconSize: [18, 18], iconAnchor: [9, 9] });
     }
 
-    airports.forEach(airport => {
-        const marker = L.marker([airport.lat, airport.lon], { icon: airportIcon(airport.icao), keyboard: true, title: `${airport.icao} — ${airport.name}` }).addTo(airportLayer);
-        marker.on('click', () => {
-            window.UI.openAirport(airport, true);
-        });
-    });
+    function refreshVisibleAirports() {
+        if (!map.hasLayer(airportLayer)) return;
+        
+        const bounds = map.getBounds().pad(0.2); // slight padding to load just outside view
+        const zoom = map.getZoom();
+        
+        let maxType = 3;
+        if (zoom < 7) maxType = 1;
+        else if (zoom < 9) maxType = 2;
+
+        const visibleIcaos = new Set();
+        
+        for (let i = 0; i < airports.length; i++) {
+            const apt = airports[i];
+            if (apt.t > maxType) continue;
+            
+            if (bounds.contains([apt.lat, apt.lon])) {
+                visibleIcaos.add(apt.icao);
+                if (!activeAirportMarkers.has(apt.icao)) {
+                    const marker = L.marker([apt.lat, apt.lon], { 
+                        icon: airportIcon(apt.icao), 
+                        keyboard: true, 
+                        title: `${apt.icao} — ${apt.name}` 
+                    });
+                    marker.on('click', () => {
+                        window.UI.openAirport(apt, true);
+                    });
+                    marker.addTo(airportLayer);
+                    activeAirportMarkers.set(apt.icao, marker);
+                }
+            }
+        }
+        
+        for (const [icao, marker] of activeAirportMarkers.entries()) {
+            if (!visibleIcaos.has(icao)) {
+                airportLayer.removeLayer(marker);
+                activeAirportMarkers.delete(icao);
+            }
+        }
+        
+        const center = map.getCenter();
+        const mainRegion = document.getElementById('main-region');
+        
+        if (mainRegion && airports.length > 0) {
+            let closest = null;
+            let minDistSq = Infinity;
+            
+            // Find closest airport to crosshair to determine local airspace
+            for (let i = 0; i < airports.length; i++) {
+                const a = airports[i];
+                const dLat = a.lat - center.lat;
+                const dLon = a.lon - center.lng;
+                const distSq = dLat * dLat + dLon * dLon;
+                if (distSq < minDistSq) {
+                    minDistSq = distSq;
+                    closest = a;
+                }
+            }
+            
+            let regionName = 'GLOBAL';
+            if (closest && closest.country) {
+                try {
+                    regionName = new Intl.DisplayNames(['en'], { type: 'region' }).of(closest.country).toUpperCase();
+                } catch (e) {
+                    regionName = closest.country;
+                }
+            }
+            
+            // Only update if it changed to prevent unnecessary DOM writes
+            const newText = `${regionName} AIRSPACE`;
+            if (mainRegion.textContent !== newText) {
+                mainRegion.textContent = newText;
+            }
+        }
+    }
+
+    map.on('moveend zoomend', refreshVisibleAirports);
+
+    fetch('data/airports.json')
+        .then(res => res.json())
+        .then(data => {
+            airports = data.map(a => ({
+                icao: a.i,
+                name: a.n,
+                lat: a.lat,
+                lon: a.lon,
+                runwayHeading: a.h,
+                t: a.t,
+                country: a.c
+            }));
+            if (window.MapManager) window.MapManager.airports = airports;
+            refreshVisibleAirports();
+            if (window.UI && window.UI.updateAirportCount) window.UI.updateAirportCount();
+            
+            // Handle URL-based airport selection now that data is loaded
+            const urlIcao = new URLSearchParams(window.location.search).get('icao');
+            if (urlIcao && window.MapManager && window.UI) {
+                const airport = window.MapManager.findAirport(urlIcao);
+                if (airport) window.setTimeout(() => window.UI.openAirport(airport, true), 150);
+            }
+        })
+        .catch(err => console.error('Failed to load global airports:', err));
 
     function dmsToDecimal(value) {
         const isLatitude = value.length === 7;
@@ -369,7 +441,10 @@
                 [sigmetLayer, sigmets]
             ];
             layers.forEach(([layer, visible]) => {
-                if (visible && !map.hasLayer(layer)) map.addLayer(layer);
+                if (visible && !map.hasLayer(layer)) {
+                    map.addLayer(layer);
+                    if (layer === airportLayer) refreshVisibleAirports();
+                }
                 if (!visible && map.hasLayer(layer)) map.removeLayer(layer);
             });
         },

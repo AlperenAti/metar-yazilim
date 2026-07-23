@@ -150,6 +150,30 @@
         renderTafParsed(taf, tafUnavailable);
         
         window.Visualizer.drawRunwayAndWind(selectedAirport.runwayHeading, metar.windDirection, metar.windSpeed);
+        
+        if (window.AtisGenerator) {
+            const atisObj = window.AtisGenerator.generateAtis(selectedAirport, metar);
+            if (atisObj) {
+                $('atis-text').innerHTML = `<strong>${atisObj.phoneticLetter}</strong><br><br>${atisObj.text}`;
+                $('play-atis-btn').onclick = () => {
+                    const btn = $('play-atis-btn');
+                    if (btn.classList.contains('playing')) {
+                        window.AtisGenerator.stopAudio();
+                        btn.classList.remove('playing');
+                        btn.innerHTML = '<span class="icon">▶</span> Play Audio';
+                    } else {
+                        btn.classList.add('playing');
+                        btn.innerHTML = '<span class="icon">⏹</span> Stop Audio';
+                        window.AtisGenerator.playAudio(atisObj.text, () => {
+                            btn.classList.remove('playing');
+                            btn.innerHTML = '<span class="icon">▶</span> Play Audio';
+                        });
+                    }
+                };
+            } else {
+                $('atis-text').innerHTML = '<p class="empty-state">ATIS could not be generated from current METAR.</p>';
+            }
+        }
     }
 
     function renderTafParsed(tafText, tafUnavailable) {
@@ -231,7 +255,17 @@
         $('apt-icao').textContent = airport.icao;
         $('apt-name').textContent = airport.name;
         $('runway-label').textContent = `Reference RWY ${runwayPair(airport.runwayHeading)}`;
-        $('airport-region').textContent = 'TURKEY · REAL DATA';
+        
+        let regionName = 'UNKNOWN';
+        if (airport.country) {
+            try {
+                regionName = new Intl.DisplayNames(['en'], { type: 'region' }).of(airport.country).toUpperCase();
+            } catch (e) {
+                regionName = airport.country;
+            }
+        }
+        $('airport-region').textContent = `${regionName} · REAL DATA`;
+        
         setTab('weather');
         airportPanel.classList.add('open');
         airportPanel.setAttribute('aria-hidden', 'false');
@@ -251,6 +285,13 @@
     }
 
     function closeAirport() {
+        if (window.AtisGenerator) window.AtisGenerator.stopAudio();
+        const btn = $('play-atis-btn');
+        if (btn) {
+            btn.classList.remove('playing');
+            btn.innerHTML = '<span class="icon">▶</span> Play Audio';
+        }
+        
         airportPanel.classList.remove('open');
         airportPanel.setAttribute('aria-hidden', 'true');
         const url = new URL(window.location.href);
@@ -407,11 +448,6 @@
         }));
         ['layer-aircraft', 'layer-airports', 'layer-sigmet'].forEach(id => $(id).addEventListener('change', applyLayerVisibility));
         updateAltitudeLabel();
-        const icao = new URLSearchParams(window.location.search).get('icao');
-        if (icao) {
-            const airport = window.MapManager.findAirport(icao);
-            if (airport) window.setTimeout(() => openAirport(airport, true), 150);
-        }
     }
 
     window.UI = {
@@ -426,6 +462,9 @@
         getFilters,
         showToast,
         showFlight,
+        updateAirportCount: () => {
+            if ($('airport-count')) $('airport-count').textContent = formatNumber(window.MapManager.airports.length);
+        },
         getSelectedAirport: () => selectedAirport
     };
 }());
