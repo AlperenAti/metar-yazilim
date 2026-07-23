@@ -122,6 +122,7 @@
             </div>
 
             <nav class="panel-tabs" aria-label="Airport sections">
+                <button data-tab="info" class="tab" type="button">Info</button>
                 <button data-tab="weather" class="tab active" type="button">Weather</button>
                 <button data-tab="atis" class="tab" type="button">ATIS</button>
                 <button data-tab="notam" class="tab" type="button">NOTAM</button>
@@ -129,6 +130,29 @@
             </nav>
 
             <div class="panel-scroll">
+                <section id="tab-info" class="tab-panel">
+                    <div class="info-block">
+                        <div class="info-grid">
+                            <div><span>COORDINATES</span><strong id="apt-coords">—</strong></div>
+                            <div><span>ELEVATION</span><strong id="apt-elev">—</strong></div>
+                        </div>
+                    </div>
+                    
+                    <div class="weather-block">
+                        <div class="block-heading"><h3>RUNWAYS</h3></div>
+                        <div id="apt-runways" class="runway-list">
+                            <p class="empty-state">No runway data available.</p>
+                        </div>
+                    </div>
+
+                    <div class="weather-block">
+                        <div class="block-heading"><h3>FREQUENCIES</h3></div>
+                        <div id="apt-freqs" class="freq-list">
+                            <p class="empty-state">No frequency data available.</p>
+                        </div>
+                    </div>
+                </section>
+                
                 <section id="tab-weather" class="tab-panel active">
                     <div id="weather-status" class="data-status loading"><i></i> Fetching METAR…</div>
                     <div class="flight-category-card">

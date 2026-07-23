@@ -250,6 +250,59 @@
         }
     }
 
+    function formatCoordinates(lat, lon) {
+        const latDir = lat >= 0 ? 'N' : 'S';
+        const lonDir = lon >= 0 ? 'E' : 'W';
+        const latAbs = Math.abs(lat);
+        const lonAbs = Math.abs(lon);
+        
+        const latDeg = Math.floor(latAbs);
+        const latMin = ((latAbs - latDeg) * 60).toFixed(2);
+        
+        const lonDeg = Math.floor(lonAbs);
+        const lonMin = ((lonAbs - lonDeg) * 60).toFixed(2);
+        
+        return `${latDir}${latDeg}°${latMin}' / ${lonDir}${lonDeg}°${lonMin}'`;
+    }
+
+    function renderAirportInfo(airport) {
+        $('apt-coords').textContent = formatCoordinates(airport.lat, airport.lon);
+        
+        const elevFt = airport.elevation || 0;
+        const elevM = Math.round(elevFt * 0.3048);
+        $('apt-elev').textContent = `${elevFt} ft / ${elevM} m`;
+        
+        const rwyContainer = $('apt-runways');
+        if (airport.runways && airport.runways.length > 0) {
+            rwyContainer.innerHTML = airport.runways.map(r => {
+                const ident = `${r[0] || '?'}/${r[1] || '?'}`;
+                const lenFt = r[2] || 0;
+                const widFt = r[3] || 0;
+                let dims = 'Dimensions unknown';
+                if (lenFt > 0) {
+                    const lenM = Math.round(lenFt * 0.3048);
+                    const widM = widFt > 0 ? Math.round(widFt * 0.3048) : '?';
+                    dims = `${lenM} x ${widM} m (${lenFt} ft)`;
+                }
+                return `<div class="runway-item">
+                    <span class="runway-ident">${ident}</span>
+                    <span class="runway-dim">${dims}</span>
+                </div>`;
+            }).join('');
+        } else {
+            rwyContainer.innerHTML = '<p class="empty-state">No runway data available.</p>';
+        }
+        
+        const freqContainer = $('apt-freqs');
+        if (airport.frequencies && airport.frequencies.length > 0) {
+            freqContainer.innerHTML = airport.frequencies.map(f => {
+                return `<div class="freq-badge"><span class="freq-type">${f[0]}</span><span class="freq-val">${f[1]}</span></div>`;
+            }).join('');
+        } else {
+            freqContainer.innerHTML = '<p class="empty-state">No frequency data available.</p>';
+        }
+    }
+
     function openAirport(airport, focusMap = false) {
         selectedAirport = airport;
         $('apt-icao').textContent = airport.icao;
@@ -265,6 +318,8 @@
             }
         }
         $('airport-region').textContent = `${regionName} · REAL DATA`;
+        
+        renderAirportInfo(airport);
         
         setTab('weather');
         airportPanel.classList.add('open');

@@ -133,3 +133,17 @@ button { color: inherit; }
 .map-crosshair::before, .map-crosshair::after { content: ''; position: absolute; background: rgba(255, 255, 255, 0.8); }
 .map-crosshair::before { top: 50%; left: 0; right: 0; height: 2px; margin-top: -1px; }
 .map-crosshair::after { left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; }
+
+/* Info Tab Styles */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+.info-grid div { display: flex; flex-direction: column; background: rgba(0, 0, 0, 0.2); padding: 10px; border-radius: 6px; }
+.info-grid span { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+.info-grid strong { font-size: 13px; color: #fff; }
+.runway-list { display: flex; flex-direction: column; gap: 8px; }
+.runway-item { display: flex; justify-content: space-between; background: rgba(0, 229, 255, 0.05); padding: 8px 12px; border-radius: 4px; border-left: 3px solid var(--accent); }
+.runway-ident { font-weight: bold; font-family: monospace; font-size: 14px; }
+.runway-dim { font-size: 12px; color: var(--muted); }
+.freq-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.freq-badge { display: flex; align-items: center; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+.freq-type { font-weight: bold; color: var(--accent); margin-right: 8px; font-size: 10px; }
+.freq-val { font-family: monospace; }

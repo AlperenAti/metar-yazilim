@@ -112,7 +112,10 @@
                 lon: a.lon,
                 runwayHeading: a.h,
                 t: a.t,
-                country: a.c
+                country: a.c,
+                elevation: a.e,
+                runways: a.r,
+                frequencies: a.f
             }));
             if (window.MapManager) window.MapManager.airports = airports;
             refreshVisibleAirports();
