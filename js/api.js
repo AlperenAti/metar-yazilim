@@ -7,8 +7,8 @@
  * because the official endpoint does not grant browsers CORS access directly.
  */
 (function () {
-    const WEATHER_API = '/api/weather/metar?ids=';
-    const TAF_API = '/api/weather/taf?ids=';
+    const WEATHER_API = 'https://metar-yazilim.onrender.com/api/weather/metar?ids=';
+    const TAF_API = 'https://metar-yazilim.onrender.com/api/weather/taf?ids=';
     const AIRCRAFT_API = 'https://api.airplanes.live/v2';
 
     async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {

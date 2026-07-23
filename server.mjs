@@ -11,7 +11,13 @@ const weatherCache = new Map();
 const MIME_TYPES = { '.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml' };
 
 function send(response, status, body, headers = {}) {
-    response.writeHead(status, { 'X-Content-Type-Options': 'nosniff', ...headers });
+    response.writeHead(status, { 
+        'X-Content-Type-Options': 'nosniff', 
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        ...headers 
+    });
     response.end(body);
 }
 
@@ -83,8 +89,12 @@ function handleStatic(requestUrl, response) {
 
 createServer((request, response) => {
     const requestUrl = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+    if (request.method === 'OPTIONS') {
+        send(response, 204, '');
+        return;
+    }
     if (request.method !== 'GET') {
-        send(response, 405, 'Only GET is supported.', { Allow: 'GET', 'Content-Type': 'text/plain; charset=utf-8' });
+        send(response, 405, 'Only GET is supported.', { Allow: 'GET, OPTIONS', 'Content-Type': 'text/plain; charset=utf-8' });
         return;
     }
     if (requestUrl.pathname.startsWith('/api/weather/')) {

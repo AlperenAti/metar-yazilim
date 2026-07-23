@@ -49,7 +49,7 @@ window.SigmetLayer = L.LayerGroup.extend({
     fetchData: async function() {
         if (!this.active) return;
         try {
-            const res = await fetch('/api/weather/isigmet');
+            const res = await fetch('https://metar-yazilim.onrender.com/api/weather/isigmet');
             if (!res.ok) throw new Error(`SIGMET fetch failed: ${res.status}`);
             
             const data = await res.json();
