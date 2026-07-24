@@ -90,71 +90,52 @@
             }
         }
 
+        getBearing(lat1, lon1, lat2, lon2) {
+            const lat1Rad = lat1 * Math.PI / 180;
+            const lat2Rad = lat2 * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            
+            const y = Math.sin(dLon) * Math.cos(lat2Rad);
+            const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+            const brng = Math.atan2(y, x);
+            
+            return (brng * 180 / Math.PI + 360) % 360;
+        }
+
         drawRunways(apt) {
-            apt.runways.forEach(rwy => {
-                const id1 = rwy[0];
-                const id2 = rwy[1];
-                const lengthFt = rwy[2];
-                const widthFt = rwy[3] || 150;
-                
-                const lengthM = lengthFt * 0.3048;
-                
-                const rwy1 = this.parseRunwayId(id1);
-                
-                let heading = rwy1.num * 10;
-                if (heading === 0) return; 
-                
-                let offsetM = 0;
-                if (rwy1.suffix === 'L') offsetM = -400;
-                if (rwy1.suffix === 'R') offsetM = 400;
-                
-                let centerLat = apt.lat;
-                let centerLon = apt.lon;
-                
-                if (offsetM !== 0) {
-                    const offsetHeading = (heading + 90) % 360;
-                    const offsetCenter = this.destinationPoint(centerLat, centerLon, offsetM, offsetHeading);
-                    centerLat = offsetCenter[0];
-                    centerLon = offsetCenter[1];
-                }
-
-                const startPoint = this.destinationPoint(centerLat, centerLon, lengthM / 2, (heading + 180) % 360);
-                const endPoint = this.destinationPoint(centerLat, centerLon, lengthM / 2, heading);
-
-                // Draw background runway surface (Dark grey)
-                L.polyline([startPoint, endPoint], {
-                    color: '#2a2b2d',
-                    weight: 22,
-                    opacity: 0.9,
-                    lineCap: 'butt'
-                }).addTo(this.layerGroup);
-
-                // Draw centerline (Dashed white/grey)
-                L.polyline([startPoint, endPoint], {
-                    color: '#8b98a5',
-                    weight: 2,
-                    dashArray: '10, 15',
-                    opacity: 0.8
-                }).addTo(this.layerGroup);
-
-                const label1Rot = heading - 180; 
-                const label1Icon = L.divIcon({
-                    className: 'runway-label-container',
-                    html: `<div class="runway-label" style="transform: rotate(${label1Rot}deg);">${id1}</div>`,
-                    iconSize: [0, 0],
-                    iconAnchor: [0, 0]
-                });
-                L.marker(startPoint, { icon: label1Icon, interactive: false }).addTo(this.layerGroup);
-
-                if (id2) {
-                    const label2Rot = heading % 360; 
-                    const label2Icon = L.divIcon({
+            if (!window.MapManager.runwayCoords || !window.MapManager.runwayCoords[apt.icao]) return;
+            
+            const realRunways = window.MapManager.runwayCoords[apt.icao];
+            
+            realRunways.forEach(rwy => {
+                if (rwy.id1 && rwy.lat1 && rwy.lon1 && rwy.id2 && rwy.lat2 && rwy.lon2) {
+                    const bearing1To2 = this.getBearing(rwy.lat1, rwy.lon1, rwy.lat2, rwy.lon2);
+                    const bearing2To1 = (bearing1To2 + 180) % 360;
+                    
+                    const label1Icon = L.divIcon({
                         className: 'runway-label-container',
-                        html: `<div class="runway-label" style="transform: rotate(${label2Rot}deg);">${id2}</div>`,
+                        html: `<div class="runway-label" style="transform: rotate(${bearing1To2 - 180}deg);">${rwy.id1}</div>`,
                         iconSize: [0, 0],
                         iconAnchor: [0, 0]
                     });
-                    L.marker(endPoint, { icon: label2Icon, interactive: false }).addTo(this.layerGroup);
+                    L.marker([rwy.lat1, rwy.lon1], { icon: label1Icon, interactive: false }).addTo(this.layerGroup);
+
+                    const label2Icon = L.divIcon({
+                        className: 'runway-label-container',
+                        html: `<div class="runway-label" style="transform: rotate(${bearing2To1 - 180}deg);">${rwy.id2}</div>`,
+                        iconSize: [0, 0],
+                        iconAnchor: [0, 0]
+                    });
+                    L.marker([rwy.lat2, rwy.lon2], { icon: label2Icon, interactive: false }).addTo(this.layerGroup);
+                }
+                else if (rwy.id1 && rwy.lat1 && rwy.lon1) {
+                    const label1Icon = L.divIcon({
+                        className: 'runway-label-container',
+                        html: `<div class="runway-label">${rwy.id1}</div>`,
+                        iconSize: [0, 0],
+                        iconAnchor: [0, 0]
+                    });
+                    L.marker([rwy.lat1, rwy.lon1], { icon: label1Icon, interactive: false }).addTo(this.layerGroup);
                 }
             });
         }

@@ -142,8 +142,14 @@
                 const airport = window.MapManager.findAirport(urlIcao);
                 if (airport) window.setTimeout(() => window.UI.openAirport(airport, true), 150);
             }
-        })
         .catch(err => console.error('Failed to load global airports:', err));
+
+    fetch('data/runway_coords.json')
+        .then(res => res.json())
+        .then(data => {
+            if (window.MapManager) window.MapManager.runwayCoords = data;
+        })
+        .catch(err => console.error('Failed to load runway coordinates:', err));
 
     function dmsToDecimal(value) {
         const isLatitude = value.length === 7;
