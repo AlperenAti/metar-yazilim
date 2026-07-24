@@ -147,3 +147,6 @@ button { color: inherit; }
 .freq-badge { display: flex; align-items: center; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 12px; }
 .freq-type { font-weight: bold; color: var(--accent); margin-right: 8px; font-size: 10px; }
 .freq-val { font-family: monospace; }
+
+/* Dark Popup */
+.dark-popup .leaflet-popup-content-wrapper, .dark-popup .leaflet-popup-tip { background: var(--surface); color: var(--text); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }

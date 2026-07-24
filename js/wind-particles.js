@@ -24,6 +24,9 @@
             };
 
             map.on('moveend', this._scheduleUpdate);
+            this._onClick = (e) => this._handleMapClick(e);
+            map.on('click', this._onClick);
+            
             this._scheduleUpdate();
         },
 
@@ -31,6 +34,7 @@
             L.LayerGroup.prototype.onRemove.call(this, map);
             this.active = false;
             map.off('moveend', this._scheduleUpdate);
+            map.off('click', this._onClick);
             
             if (this._timeout) clearTimeout(this._timeout);
             if (this._abortController) this._abortController.abort();
@@ -38,6 +42,71 @@
             if (this._velocityLayer) {
                 map.removeLayer(this._velocityLayer);
                 this._velocityLayer = null;
+            }
+        },
+
+        async _handleMapClick(e) {
+            if (!this.active) return;
+            const lat = e.latlng.lat.toFixed(2);
+            const lon = e.latlng.lng.toFixed(2);
+            
+            try {
+                // Fetch precise point data in knots
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=kn`;
+                const res = await fetch(url);
+                if (!res.ok) return;
+                const data = await res.json();
+                
+                if (data && data.current && typeof data.current.wind_speed_10m === 'number') {
+                    const speedKn = data.current.wind_speed_10m;
+                    const dir = data.current.wind_direction_10m;
+                    
+                    const container = document.createElement('div');
+                    container.style.fontFamily = "'Inter', sans-serif";
+                    container.style.textAlign = 'center';
+                    
+                    const title = document.createElement('div');
+                    title.style.fontSize = '11px';
+                    title.style.color = '#8b98a5'; 
+                    title.style.marginBottom = '4px';
+                    title.style.textTransform = 'uppercase';
+                    title.innerText = 'Wind at location';
+                    
+                    const valueDiv = document.createElement('div');
+                    valueDiv.style.fontSize = '16px';
+                    valueDiv.style.fontWeight = '600';
+                    valueDiv.style.color = '#fff';
+                    valueDiv.appendChild(document.createTextNode(`${dir}° @ `));
+                    
+                    const span = document.createElement('span');
+                    span.style.cursor = 'pointer';
+                    span.style.borderBottom = '1px dashed #8b98a5';
+                    span.style.color = '#4da6ff';
+                    span.title = "Click to change units";
+                    span.innerText = `${speedKn.toFixed(1)} kt`;
+                    
+                    let state = 0;
+                    span.addEventListener('click', (ev) => {
+                        ev.stopPropagation(); // Prevent map click
+                        state = (state + 1) % 3;
+                        if (state === 0) span.innerText = speedKn.toFixed(1) + ' kt';
+                        else if (state === 1) span.innerText = (speedKn * 1.852).toFixed(1) + ' km/h';
+                        else if (state === 2) span.innerText = (speedKn * 1.15078).toFixed(1) + ' mph';
+                    });
+                    
+                    valueDiv.appendChild(span);
+                    container.appendChild(title);
+                    container.appendChild(valueDiv);
+                    
+                    L.popup({
+                        className: 'dark-popup'
+                    })
+                        .setLatLng(e.latlng)
+                        .setContent(container)
+                        .openOn(this._map);
+                }
+            } catch(err) {
+                console.warn("Click fetch error:", err);
             }
         },
 
