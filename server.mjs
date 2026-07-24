@@ -50,7 +50,7 @@ async function updateGlobalWindCache() {
         for (const chunk of chunks) {
             const lats = chunk.map(p => p.lat.toFixed(2)).join(',');
             const lons = chunk.map(p => p.lon.toFixed(2)).join(',');
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`;
+            const url = `https://api.open-meteo.com/v1/gfs?latitude=${lats}&longitude=${lons}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`;
             
             const res = await fetch(url);
             if (!res.ok) throw new Error(`Open-Meteo responded with ${res.status}`);
