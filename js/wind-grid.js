@@ -7,14 +7,9 @@
     const SPRITE_SIZE = 44;               
     const DPR = window.devicePixelRatio || 1;
     
-    // Windy-like color scale
+    // Professional aviation styling (monochrome slate/white)
     function speedColor(kt) {
-      if (kt < 5)  return '#8b98a5';
-      if (kt < 15) return '#4da6ff';
-      if (kt < 25) return '#4ddb85';
-      if (kt < 40) return '#f5c542';
-      if (kt < 50) return '#f57c42';
-      return '#f54263';
+      return '#E2E8F0';
     }
     
     function makeHiDPICanvas(w, h) {
@@ -134,6 +129,12 @@
         this._onMove = this._throttledMove.bind(this);
         this._onResize = this._onResizeHandler.bind(this);
     
+        this._onZoomStart = () => {
+            // Hide smoothly during zoom animation to prevent visual glitches
+            this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
+        };
+        
+        map.on('zoomstart', this._onZoomStart);
         map.on('moveend', this._onMoveEnd);
         map.on('move', this._onMove);
         map.on('resize', this._onResize);
@@ -144,6 +145,7 @@
     
       onRemove(map) {
         L.DomUtil.remove(this._canvas);
+        map.off('zoomstart', this._onZoomStart);
         map.off('moveend', this._onMoveEnd);
         map.off('move', this._onMove);
         map.off('resize', this._onResize);
@@ -189,11 +191,10 @@
         const bounds = this._map.getBounds();
         const zoom = this._map.getZoom();
         
-        // Determine grid density based on zoom
-        let steps = 14;
-        if (zoom < 5) steps = 8;
-        else if (zoom < 7) steps = 10;
-        else if (zoom > 9) steps = 18;
+        // STRICT CAP: 9 steps means 9x9 = 81 points. 
+        // This guarantees EXACTLY 1 request to Open-Meteo per map move (Max is 100 points/req).
+        // Prevents burst rate-limiting (429 errors) which caused barbs to disappear.
+        const steps = 9; 
         
         const latDelta = bounds.getNorth() - bounds.getSouth();
         const lonDelta = bounds.getEast() - bounds.getWest();
@@ -261,7 +262,9 @@
                 });
             }
             
-            if (generation === this._currentGeneration) {
+            // Only update data if the fetch was actually successful!
+            // If it failed, we keep the old data instead of going blank.
+            if (generation === this._currentGeneration && newData.length > 0) {
                 this._data = newData;
                 this._redraw();
             }
