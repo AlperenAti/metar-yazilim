@@ -72,7 +72,7 @@
                 const res = await fetch(url);
                 
                 if (!res.ok) {
-                    loadingPopup.setContent('<div style="font-family: Inter, sans-serif; font-size: 12px; color: #f54263; padding: 5px; text-align: center;">API Rate Limit.<br>Please wait a second.</div>');
+                    loadingPopup.remove();
                     return;
                 }
                 
@@ -121,11 +121,11 @@
                     
                     loadingPopup.setContent(container);
                 } else {
-                    loadingPopup.setContent('<div style="font-family: Inter, sans-serif; font-size: 12px; color: #f54263; padding: 5px; text-align: center;">No data here.</div>');
+                    loadingPopup.remove();
                 }
             } catch(err) {
                 console.warn("Click fetch error:", err);
-                loadingPopup.setContent('<div style="font-family: Inter, sans-serif; font-size: 12px; color: #f54263; padding: 5px; text-align: center;">Network Error</div>');
+                loadingPopup.remove();
             }
         },
 
@@ -277,13 +277,6 @@
             } catch (e) {
                 if (e.name !== 'AbortError') {
                     console.warn("Wind Particles Error:", e);
-                    if (e.message === "RATE_LIMIT") {
-                        // Show a discrete popup on the map instead of a blocking alert
-                        L.popup({ className: 'dark-popup' })
-                            .setLatLng(this._map.getCenter())
-                            .setContent('<div style="color: #f54263; font-weight: bold; text-align: center;">Open-Meteo API Rate Limit!<br><span style="font-size: 12px; color: #fff;">Lütfen 1 dakika bekleyin.</span></div>')
-                            .openOn(this._map);
-                    }
                 }
             }
         },
