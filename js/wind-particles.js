@@ -139,11 +139,11 @@
             
             const bounds = this._map.getBounds();
             
-            // We need a dense enough grid for fluid particles.
-            // leaflet-velocity interpolates beautifully, so a 20x20 grid is visually stunning.
-            // 20x20 = 400 points = 4 Open-Meteo requests.
-            const gridWidth = 20;
-            const gridHeight = 20;
+            // A 10x10 grid is 100 points, which means exactly 1 Open-Meteo API request!
+            // This completely eliminates the 429 Too Many Requests burst limits.
+            // leaflet-velocity will smoothly interpolate these 100 points across the screen.
+            const gridWidth = 10;
+            const gridHeight = 10;
             
             const n = bounds.getNorth();
             const s = bounds.getSouth();
@@ -191,7 +191,12 @@
                     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`;
                     
                     const res = await fetch(url, { signal });
-                    if (!res.ok) throw new Error("API Error");
+                    if (!res.ok) {
+                        if (res.status === 429) {
+                            throw new Error("RATE_LIMIT");
+                        }
+                        throw new Error("API Error");
+                    }
                     return await res.json();
                 });
                 
@@ -272,6 +277,13 @@
             } catch (e) {
                 if (e.name !== 'AbortError') {
                     console.warn("Wind Particles Error:", e);
+                    if (e.message === "RATE_LIMIT") {
+                        // Show a discrete popup on the map instead of a blocking alert
+                        L.popup({ className: 'dark-popup' })
+                            .setLatLng(this._map.getCenter())
+                            .setContent('<div style="color: #f54263; font-weight: bold; text-align: center;">Open-Meteo API Rate Limit!<br><span style="font-size: 12px; color: #fff;">Lütfen 1 dakika bekleyin.</span></div>')
+                            .openOn(this._map);
+                    }
                 }
             }
         },
