@@ -19,8 +19,14 @@
             this._map = map;
             this.active = true;
 
+            this._scheduleUpdate = () => {
+                if (this._timeout) clearTimeout(this._timeout);
+                this._timeout = setTimeout(() => this._fetchGrid(), 1000); // 1 saniye bekle (Spam koruması)
+            };
+
+            this._map.on('moveend', this._scheduleUpdate);
             this._onClick = (e) => this._handleMapClick(e);
-            map.on('click', this._onClick);
+            this._map.on('click', this._onClick);
             
             if (!this._legend) {
                 this._legend = new WindLegend();
@@ -33,7 +39,10 @@
         onRemove: function(map) {
             L.LayerGroup.prototype.onRemove.call(this, map);
             this.active = false;
-            map.off('click', this._onClick);
+            this._map.off('moveend', this._scheduleUpdate);
+            this._map.off('click', this._onClick);
+            
+            if (this._timeout) clearTimeout(this._timeout);
             if (this._abortController) this._abortController.abort();
             
             if (this._velocityLayer) {
@@ -128,15 +137,18 @@
             const signal = this._abortController.signal;
             
             try {
-                // To bypass Render's commercial IP block, we fetch directly from the browser.
-                // To bypass map-panning rate limits, we fetch a global 10x10 grid EXACTLY ONCE.
-                // 10x10 = 100 points = exactly 1 Open-Meteo request.
+                // To capture local weather (like typhoons) we MUST use the current screen bounds,
+                // but we keep it at 10x10 (1 request) to avoid Open-Meteo bans.
+                const bounds = this._map.getBounds();
                 const gridWidth = 10;
                 const gridHeight = 10;
-                const n = 80; 
-                const s = -80;
-                const w = -180;
-                const e = 180;
+                
+                const n = bounds.getNorth();
+                const s = bounds.getSouth();
+                let w = bounds.getWest();
+                let e = bounds.getEast();
+                
+                if (e - w > 360) { e = w + 360; }
                 
                 const dy = (n - s) / (gridHeight - 1);
                 const dx = (e - w) / (gridWidth - 1);
