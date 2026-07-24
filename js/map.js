@@ -16,6 +16,7 @@
     const airportLayer = L.layerGroup().addTo(map);
     const aircraftLayer = L.layerGroup().addTo(map);
     const sigmetLayer = new window.SigmetLayer();
+    const runwayLayer = new window.RunwayLayer().addTo(map);
     
     let airports = [];
     const activeAirportMarkers = new Map();
