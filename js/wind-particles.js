@@ -128,11 +128,74 @@
             const signal = this._abortController.signal;
             
             try {
-                const res = await fetch('/api/wind', { signal });
-                if (!res.ok) throw new Error("Failed to fetch wind data from backend");
+                // To bypass Render's commercial IP block, we fetch directly from the browser.
+                // To bypass map-panning rate limits, we fetch a global 10x10 grid EXACTLY ONCE.
+                // 10x10 = 100 points = exactly 1 Open-Meteo request.
+                const gridWidth = 10;
+                const gridHeight = 10;
+                const n = 80; 
+                const s = -80;
+                const w = -180;
+                const e = 180;
                 
-                const velocityData = await res.json();
+                const dy = (n - s) / (gridHeight - 1);
+                const dx = (e - w) / (gridWidth - 1);
+                
+                const latsArr = [];
+                const lonsArr = [];
+                for (let y = 0; y < gridHeight; y++) {
+                    const lat = n - (y * dy);
+                    for (let x = 0; x < gridWidth; x++) {
+                        const lon = w + (x * dx);
+                        latsArr.push(lat.toFixed(2));
+                        lonsArr.push(lon.toFixed(2));
+                    }
+                }
+                
+                const latsStr = latsArr.join(',');
+                const lonsStr = lonsArr.join(',');
+                const url = `https://api.open-meteo.com/v1/gfs?latitude=${latsStr}&longitude=${lonsStr}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`;
+                
+                const res = await fetch(url, { signal });
+                if (!res.ok) {
+                    throw new Error("Open-Meteo Rate Limit or Network Error");
+                }
+                
+                const data = await res.json();
                 if (!this.active) return;
+                
+                const pointsData = Array.isArray(data) ? data : [data];
+                const uData = [];
+                const vData = [];
+                
+                for (let i = 0; i < pointsData.length; i++) {
+                    const point = pointsData[i];
+                    if (point && point.current && typeof point.current.wind_direction_10m === 'number') {
+                        const speed = point.current.wind_speed_10m; 
+                        const dir = point.current.wind_direction_10m; 
+                        
+                        const rad = dir * Math.PI / 180;
+                        const u = -speed * Math.sin(rad);
+                        const v = -speed * Math.cos(rad);
+                        
+                        uData.push(Number(u.toFixed(2)));
+                        vData.push(Number(v.toFixed(2)));
+                    } else {
+                        uData.push(0);
+                        vData.push(0);
+                    }
+                }
+                
+                const velocityData = [
+                    {
+                        header: { parameterCategory: 2, parameterNumber: 2, dx, dy, la1: n, la2: s, lo1: w, lo2: e, nx: gridWidth, ny: gridHeight },
+                        data: uData
+                    },
+                    {
+                        header: { parameterCategory: 2, parameterNumber: 3, dx, dy, la1: n, la2: s, lo1: w, lo2: e, nx: gridWidth, ny: gridHeight },
+                        data: vData
+                    }
+                ];
                 
                 this._renderVelocity(velocityData);
             } catch (e) {
