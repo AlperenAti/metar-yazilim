@@ -129,7 +129,7 @@ function validIcao(value) {
 }
 
 async function handleWeather(requestUrl, response) {
-    const match = requestUrl.pathname.match(/^\/api\/weather\/(metar|taf|isigmet)$/);
+    const match = requestUrl.pathname.match(/^\/api\/weather\/(metar|taf|isigmet|notam)$/);
     if (!match) {
         send(response, 400, JSON.stringify({ error: 'Invalid weather endpoint.' }), { 'Content-Type': 'application/json; charset=utf-8' });
         return;
@@ -137,6 +137,44 @@ async function handleWeather(requestUrl, response) {
     
     const resource = match[1];
     let upstreamUrl = `${WEATHER_ORIGIN}/${resource}`;
+    
+    if (resource === 'notam') {
+        const icao = requestUrl.searchParams.get('icao')?.trim().toUpperCase();
+        if (!validIcao(icao)) {
+            send(response, 400, JSON.stringify({ error: 'A valid ICAO code is required.' }), { 'Content-Type': 'application/json; charset=utf-8' });
+            return;
+        }
+
+        const cacheKey = `notam:${icao}`;
+        const cached = weatherCache.get(cacheKey);
+        // Cache NOTAMs for 5 minutes (300,000 ms)
+        if (cached && Date.now() - cached.at < 300000) {
+            send(response, 200, cached.body, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, max-age=300' });
+            return;
+        }
+
+        try {
+            const params = new URLSearchParams();
+            params.append('searchType', '0');
+            params.append('locators', icao);
+            
+            const upstream = await fetch('https://notams.aim.faa.gov/notamSearch/search', {
+                method: 'POST',
+                body: params,
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Mozilla/5.0' },
+                signal: AbortSignal.timeout(10000)
+            });
+
+            if (!upstream.ok) throw new Error(`FAA responded with ${upstream.status}`);
+            const body = await upstream.text();
+            
+            weatherCache.set(cacheKey, { at: Date.now(), body });
+            send(response, 200, body, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, max-age=300' });
+        } catch (error) {
+            send(response, 502, JSON.stringify({ error: 'FAA NOTAM source unreachable.', detail: error.message }), { 'Content-Type': 'application/json; charset=utf-8' });
+        }
+        return;
+    }
     
     if (resource === 'isigmet') {
         upstreamUrl += '?format=geojson';

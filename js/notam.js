@@ -16,22 +16,13 @@ class NotamProvider {
         
         let res;
         try {
-            res = await fetch('https://notams.aim.faa.gov/notamSearch/search', {
-                method: 'POST',
-                body: params,
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-            });
+            res = await fetch('https://metar-yazilim.onrender.com/api/weather/notam?icao=' + icao);
         } catch (e) {
-            console.warn("Direct FAA fetch failed (likely CORS). Attempting proxy...");
-            res = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://notams.aim.faa.gov/notamSearch/search'), {
-                method: 'POST',
-                body: params,
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-            });
+            throw new Error("Network error or server unreachable");
         }
         
         if (!res || !res.ok) {
-            throw new Error(`FAA API yanıt vermedi (Kod: ${res ? res.status : 'Bilinmiyor'})`);
+            throw new Error(`FAA API did not respond (Code: ${res ? res.status : 'Unknown'})`);
         }
         
         const data = await res.json();
@@ -105,15 +96,15 @@ window.NotamManager = {
                             <line x1="12" y1="17" x2="12.01" y2="17"></line>
                         </svg>
                         <p class="empty-state" style="color: var(--text); margin-bottom:8px; font-weight:600;">
-                            NOTAM Kaynağı Bağlı Değil
+                            NOTAM Source Disconnected
                         </p>
                         <p class="empty-state" style="font-size: 11px; max-width: 90%; margin: 0 auto; line-height:1.4;">
-                            Sistemde yapılandırılmış bir NOTAM sağlayıcısı bulunmuyor. Şimdilik aşağıdaki bağlantıyı kullanarak resmi FAA portalından ${icao} meydanı için güncel NOTAM'lara erişebilirsiniz.
+                            No configured NOTAM provider is available. For now, you can access the latest NOTAMs for ${icao} using the official FAA portal link below.
                         </p>
                     </div>
                 `;
             } else {
-                container.innerHTML = `<p class="empty-state" style="color: #e74c3c;">NOTAM verisi alınamadı: ${err.message}</p>`;
+                container.innerHTML = `<p class="empty-state" style="color: #e74c3c;">Failed to fetch NOTAM data: ${err.message}</p>`;
             }
         }
     },
@@ -124,7 +115,7 @@ window.NotamManager = {
         
         if (!this.currentNotams || this.currentNotams.length === 0) {
             if (this.provider.isConnected) {
-                container.innerHTML = '<p class="empty-state">Bu havalimanı için aktif NOTAM bulunmamaktadır.</p>';
+                container.innerHTML = '<p class="empty-state">No active NOTAMs found for this airport.</p>';
             }
             return;
         }
@@ -155,7 +146,7 @@ window.NotamManager = {
         });
         
         if (filtered.length === 0) {
-            container.innerHTML = `<p class="empty-state">Seçili filtrelere uygun NOTAM bulunamadı. Tümünü görmek için üstteki düğmeyi kapatın.</p>`;
+            container.innerHTML = `<p class="empty-state">No NOTAMs match the selected filters. Turn off the filter above to view all NOTAMs.</p>`;
             return;
         }
         

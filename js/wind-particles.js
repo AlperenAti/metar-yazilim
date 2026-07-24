@@ -21,7 +21,7 @@
 
             this._scheduleUpdate = () => {
                 if (this._timeout) clearTimeout(this._timeout);
-                this._timeout = setTimeout(() => this._fetchGrid(), 1000); // 1 saniye bekle (Spam koruması)
+                this._timeout = setTimeout(() => this._fetchGrid(), 1000); // 1 second delay (Spam protection)
             };
 
             this._onClick = (e) => this._handleMapClick(e);
