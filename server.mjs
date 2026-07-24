@@ -44,17 +44,19 @@ async function updateGlobalWindCache() {
             chunks.push(points.slice(i, i + chunkSize));
         }
         
-        const fetchPromises = chunks.map(async chunk => {
+        const chunkResults = [];
+        for (const chunk of chunks) {
             const lats = chunk.map(p => p.lat.toFixed(2)).join(',');
             const lons = chunk.map(p => p.lon.toFixed(2)).join(',');
             const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`;
             
             const res = await fetch(url);
             if (!res.ok) throw new Error(`Open-Meteo responded with ${res.status}`);
-            return await res.json();
-        });
-        
-        const chunkResults = await Promise.all(fetchPromises);
+            chunkResults.push(await res.json());
+            
+            // Sleep 300ms to avoid burst rate limits on the backend IP
+            await new Promise(r => setTimeout(r, 300));
+        }
         
         const allResults = [];
         chunkResults.forEach(data => {
