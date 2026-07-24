@@ -136,7 +136,7 @@
             
             try {
                 // Fetch the cached global wind grid from our backend
-                const res = await fetch('/api/wind', { signal });
+                const res = await fetch('https://metar-yazilim.onrender.com/api/wind', { signal });
                 if (!res.ok) {
                     throw new Error("Backend Wind API error");
                 }
