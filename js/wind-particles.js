@@ -24,7 +24,6 @@
                 this._timeout = setTimeout(() => this._fetchGrid(), 1000); // 1 saniye bekle (Spam koruması)
             };
 
-            this._map.on('moveend', this._scheduleUpdate);
             this._onClick = (e) => this._handleMapClick(e);
             this._map.on('click', this._onClick);
             
@@ -39,7 +38,6 @@
         onRemove: function(map) {
             L.LayerGroup.prototype.onRemove.call(this, map);
             this.active = false;
-            this._map.off('moveend', this._scheduleUpdate);
             this._map.off('click', this._onClick);
             
             if (this._timeout) clearTimeout(this._timeout);
@@ -124,8 +122,8 @@
                     loadingPopup.remove();
                 }
             } catch(err) {
-                console.warn("Click fetch error:", err);
-                loadingPopup.remove();
+                loadingPopup.setContent('<div style="font-family: Inter, sans-serif; font-size: 11px; color: #f54263; padding: 5px; text-align: center;">Wind data limit reached.</div>');
+                setTimeout(() => loadingPopup.remove(), 2000);
             }
         },
 
@@ -137,82 +135,19 @@
             const signal = this._abortController.signal;
             
             try {
-                // To capture local weather (like typhoons) we MUST use the current screen bounds,
-                // but we keep it at 10x10 (1 request) to avoid Open-Meteo bans.
-                const bounds = this._map.getBounds();
-                const gridWidth = 10;
-                const gridHeight = 10;
-                
-                const n = bounds.getNorth();
-                const s = bounds.getSouth();
-                let w = bounds.getWest();
-                let e = bounds.getEast();
-                
-                if (e - w > 360) { e = w + 360; }
-                
-                const dy = (n - s) / (gridHeight - 1);
-                const dx = (e - w) / (gridWidth - 1);
-                
-                const latsArr = [];
-                const lonsArr = [];
-                for (let y = 0; y < gridHeight; y++) {
-                    const lat = n - (y * dy);
-                    for (let x = 0; x < gridWidth; x++) {
-                        const lon = w + (x * dx);
-                        latsArr.push(lat.toFixed(2));
-                        lonsArr.push(lon.toFixed(2));
-                    }
-                }
-                
-                const latsStr = latsArr.join(',');
-                const lonsStr = lonsArr.join(',');
-                const url = `https://api.open-meteo.com/v1/gfs?latitude=${latsStr}&longitude=${lonsStr}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`;
-                
-                const res = await fetch(url, { signal });
+                // Fetch the cached global wind grid from our backend
+                const res = await fetch('/api/wind', { signal });
                 if (!res.ok) {
-                    throw new Error("Open-Meteo Rate Limit or Network Error");
+                    throw new Error("Backend Wind API error");
                 }
                 
-                const data = await res.json();
+                const velocityData = await res.json();
                 if (!this.active) return;
-                
-                const pointsData = Array.isArray(data) ? data : [data];
-                const uData = [];
-                const vData = [];
-                
-                for (let i = 0; i < pointsData.length; i++) {
-                    const point = pointsData[i];
-                    if (point && point.current && typeof point.current.wind_direction_10m === 'number') {
-                        const speed = point.current.wind_speed_10m; 
-                        const dir = point.current.wind_direction_10m; 
-                        
-                        const rad = dir * Math.PI / 180;
-                        const u = -speed * Math.sin(rad);
-                        const v = -speed * Math.cos(rad);
-                        
-                        uData.push(Number(u.toFixed(2)));
-                        vData.push(Number(v.toFixed(2)));
-                    } else {
-                        uData.push(0);
-                        vData.push(0);
-                    }
-                }
-                
-                const velocityData = [
-                    {
-                        header: { parameterCategory: 2, parameterNumber: 2, dx, dy, la1: n, la2: s, lo1: w, lo2: e, nx: gridWidth, ny: gridHeight },
-                        data: uData
-                    },
-                    {
-                        header: { parameterCategory: 2, parameterNumber: 3, dx, dy, la1: n, la2: s, lo1: w, lo2: e, nx: gridWidth, ny: gridHeight },
-                        data: vData
-                    }
-                ];
                 
                 this._renderVelocity(velocityData);
             } catch (e) {
                 if (e.name !== 'AbortError') {
-                    console.warn("Wind Particles Error:", e);
+                    console.warn("Wind Particles Error (Backend):", e);
                 }
             }
         },
