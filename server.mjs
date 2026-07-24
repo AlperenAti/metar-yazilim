@@ -12,10 +12,12 @@ const MIME_TYPES = { '.css': 'text/css; charset=utf-8', '.html': 'text/html; cha
 
 let globalWindData = null;
 let isFetchingWind = false;
+let lastWindError = null;
 
 async function updateGlobalWindCache() {
     if (isFetchingWind) return;
     isFetchingWind = true;
+    lastWindError = null;
     console.log("Fetching global wind grid from Open-Meteo...");
     
     try {
@@ -97,8 +99,10 @@ async function updateGlobalWindCache() {
         ];
         
         globalWindData = JSON.stringify(velocityData);
+        lastWindError = null;
         console.log("Global wind cache updated successfully.");
     } catch (e) {
+        lastWindError = e.message;
         console.error("Failed to update global wind cache:", e.message);
     } finally {
         isFetchingWind = false;
@@ -202,7 +206,7 @@ createServer((request, response) => {
     }
     if (requestUrl.pathname === '/api/wind') {
         if (!globalWindData) {
-            send(response, 503, JSON.stringify({ error: 'Wind data is initializing, please try again soon.' }), { 'Content-Type': 'application/json; charset=utf-8' });
+            send(response, 503, JSON.stringify({ error: 'Wind data is initializing, please try again soon.', detail: lastWindError }), { 'Content-Type': 'application/json; charset=utf-8' });
         } else {
             send(response, 200, globalWindData, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=300' });
         }
