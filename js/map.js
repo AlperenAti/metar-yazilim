@@ -195,7 +195,7 @@
                 console.error('Failed to load RainViewer radar', e);
             }
         } else if (type === 'wind_grid') {
-            currentWeatherLayer = new window.WindGridLayer();
+            currentWeatherLayer = new window.WindParticlesLayer();
             map.addLayer(currentWeatherLayer);
             
             const now = new Date();
