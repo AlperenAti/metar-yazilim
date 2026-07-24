@@ -147,6 +147,7 @@
                 const airport = window.MapManager.findAirport(urlIcao);
                 if (airport) window.setTimeout(() => window.UI.openAirport(airport, true), 150);
             }
+        })
         .catch(err => console.error('Failed to load global airports:', err));
 
     fetch('data/runway_coords.json')
