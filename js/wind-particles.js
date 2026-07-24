@@ -19,12 +19,6 @@
             this._map = map;
             this.active = true;
 
-            this._scheduleUpdate = () => {
-                if (this._timeout) clearTimeout(this._timeout);
-                this._timeout = setTimeout(() => this._fetchGrid(), 600);
-            };
-
-            map.on('moveend', this._scheduleUpdate);
             this._onClick = (e) => this._handleMapClick(e);
             map.on('click', this._onClick);
             
@@ -33,16 +27,13 @@
             }
             this._legend.addTo(map);
             
-            this._scheduleUpdate();
+            this._fetchGrid();
         },
 
         onRemove: function(map) {
             L.LayerGroup.prototype.onRemove.call(this, map);
             this.active = false;
-            map.off('moveend', this._scheduleUpdate);
             map.off('click', this._onClick);
-            
-            if (this._timeout) clearTimeout(this._timeout);
             if (this._abortController) this._abortController.abort();
             
             if (this._velocityLayer) {
@@ -131,149 +122,19 @@
 
         async _fetchGrid() {
             if (!this.active) return;
-            const generation = ++this._currentGeneration;
             
             if (this._abortController) this._abortController.abort();
             this._abortController = new AbortController();
             const signal = this._abortController.signal;
             
-            const bounds = this._map.getBounds();
-            
-            // A 10x10 grid is 100 points, which means exactly 1 Open-Meteo API request!
-            // This completely eliminates the 429 Too Many Requests burst limits.
-            // leaflet-velocity will smoothly interpolate these 100 points across the screen.
-            const gridWidth = 10;
-            const gridHeight = 10;
-            
-            const n = bounds.getNorth();
-            const s = bounds.getSouth();
-            let w = bounds.getWest();
-            let e = bounds.getEast();
-            
-            // Prevent huge overlaps or bad dx
-            if (e - w > 360) { e = w + 360; }
-            
-            const dy = (n - s) / (gridHeight - 1);
-            const dx = (e - w) / (gridWidth - 1);
-            
-            // Generate exact coordinates
-            const points = [];
-            
-            // leaflet-velocity expects data starting from North to South, West to East
-            for (let y = 0; y < gridHeight; y++) {
-                const lat = n - (y * dy);
-                for (let x = 0; x < gridWidth; x++) {
-                    const lon = w + (x * dx);
-                    
-                    let qLon = lon % 360;
-                    if (qLon > 180) qLon -= 360;
-                    if (qLon < -180) qLon += 360;
-                    
-                    let qLat = lat;
-                    if (qLat > 90) qLat = 90;
-                    if (qLat < -90) qLat = -90;
-                    
-                    points.push({ lat: qLat, lon: qLon });
-                }
-            }
-            
-            // Chunking to max 100 per request
-            const chunkSize = 100;
-            const chunks = [];
-            for (let i = 0; i < points.length; i += chunkSize) {
-                chunks.push(points.slice(i, i + chunkSize));
-            }
-            
             try {
-                const fetchPromises = chunks.map(async chunk => {
-                    const lats = chunk.map(p => p.lat.toFixed(2)).join(',');
-                    const lons = chunk.map(p => p.lon.toFixed(2)).join(',');
-                    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`;
-                    
-                    const res = await fetch(url, { signal });
-                    if (!res.ok) {
-                        if (res.status === 429) {
-                            throw new Error("RATE_LIMIT");
-                        }
-                        throw new Error("API Error");
-                    }
-                    return await res.json();
-                });
+                const res = await fetch('/api/wind', { signal });
+                if (!res.ok) throw new Error("Failed to fetch wind data from backend");
                 
-                const chunkResults = await Promise.all(fetchPromises);
-                if (generation !== this._currentGeneration || !this.active) return;
+                const velocityData = await res.json();
+                if (!this.active) return;
                 
-                // Flatten results to match the 'points' array exactly
-                const allResults = [];
-                chunkResults.forEach(data => {
-                    const arr = Array.isArray(data) ? data : [data];
-                    arr.forEach(r => allResults.push(r));
-                });
-                
-                // Build U and V arrays
-                const uData = [];
-                const vData = [];
-                
-                for (let i = 0; i < allResults.length; i++) {
-                    const point = allResults[i];
-                    if (point && point.current && typeof point.current.wind_direction_10m === 'number') {
-                        const speed = point.current.wind_speed_10m; // in m/s
-                        const dir = point.current.wind_direction_10m; // meteorological degrees
-                        
-                        // Convert meteorological degrees to math radians
-                        // Meteorological: 0 is North, blowing to South.
-                        // U is toward East (+), V is toward North (+)
-                        // If wind is from 90 (East), U is negative.
-                        const rad = dir * Math.PI / 180;
-                        const u = -speed * Math.sin(rad);
-                        const v = -speed * Math.cos(rad);
-                        
-                        uData.push(u);
-                        vData.push(v);
-                    } else {
-                        // Fallback
-                        uData.push(0);
-                        vData.push(0);
-                    }
-                }
-                
-                // Construct leaflet-velocity JSON format
-                const velocityData = [
-                    {
-                        header: {
-                            parameterCategory: 2,
-                            parameterNumber: 2, // U-component
-                            dx: dx,
-                            dy: dy,
-                            la1: n,
-                            la2: s,
-                            lo1: w,
-                            lo2: e,
-                            nx: gridWidth,
-                            ny: gridHeight
-                        },
-                        data: uData
-                    },
-                    {
-                        header: {
-                            parameterCategory: 2,
-                            parameterNumber: 3, // V-component
-                            dx: dx,
-                            dy: dy,
-                            la1: n,
-                            la2: s,
-                            lo1: w,
-                            lo2: e,
-                            nx: gridWidth,
-                            ny: gridHeight
-                        },
-                        data: vData
-                    }
-                ];
-                
-                // Render the new velocity layer
                 this._renderVelocity(velocityData);
-
             } catch (e) {
                 if (e.name !== 'AbortError') {
                     console.warn("Wind Particles Error:", e);

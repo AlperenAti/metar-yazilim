@@ -10,6 +10,103 @@ const WEATHER_CACHE_MS = 60_000;
 const weatherCache = new Map();
 const MIME_TYPES = { '.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml' };
 
+let globalWindData = null;
+let isFetchingWind = false;
+
+async function updateGlobalWindCache() {
+    if (isFetchingWind) return;
+    isFetchingWind = true;
+    console.log("Fetching global wind grid from Open-Meteo...");
+    
+    try {
+        const gridWidth = 30;
+        const gridHeight = 30;
+        const n = 80; 
+        const s = -80;
+        const w = -180;
+        const e = 180;
+        
+        const dy = (n - s) / (gridHeight - 1);
+        const dx = (e - w) / (gridWidth - 1);
+        
+        const points = [];
+        for (let y = 0; y < gridHeight; y++) {
+            const lat = n - (y * dy);
+            for (let x = 0; x < gridWidth; x++) {
+                const lon = w + (x * dx);
+                points.push({ lat, lon });
+            }
+        }
+        
+        const chunkSize = 100;
+        const chunks = [];
+        for (let i = 0; i < points.length; i += chunkSize) {
+            chunks.push(points.slice(i, i + chunkSize));
+        }
+        
+        const fetchPromises = chunks.map(async chunk => {
+            const lats = chunk.map(p => p.lat.toFixed(2)).join(',');
+            const lons = chunk.map(p => p.lon.toFixed(2)).join(',');
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`;
+            
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Open-Meteo responded with ${res.status}`);
+            return await res.json();
+        });
+        
+        const chunkResults = await Promise.all(fetchPromises);
+        
+        const allResults = [];
+        chunkResults.forEach(data => {
+            const arr = Array.isArray(data) ? data : [data];
+            arr.forEach(r => allResults.push(r));
+        });
+        
+        const uData = [];
+        const vData = [];
+        
+        for (let i = 0; i < allResults.length; i++) {
+            const point = allResults[i];
+            if (point && point.current && typeof point.current.wind_direction_10m === 'number') {
+                const speed = point.current.wind_speed_10m; 
+                const dir = point.current.wind_direction_10m; 
+                
+                const rad = dir * Math.PI / 180;
+                const u = -speed * Math.sin(rad);
+                const v = -speed * Math.cos(rad);
+                
+                uData.push(Number(u.toFixed(2)));
+                vData.push(Number(v.toFixed(2)));
+            } else {
+                uData.push(0);
+                vData.push(0);
+            }
+        }
+        
+        const velocityData = [
+            {
+                header: { parameterCategory: 2, parameterNumber: 2, dx, dy, la1: n, la2: s, lo1: w, lo2: e, nx: gridWidth, ny: gridHeight },
+                data: uData
+            },
+            {
+                header: { parameterCategory: 2, parameterNumber: 3, dx, dy, la1: n, la2: s, lo1: w, lo2: e, nx: gridWidth, ny: gridHeight },
+                data: vData
+            }
+        ];
+        
+        globalWindData = JSON.stringify(velocityData);
+        console.log("Global wind cache updated successfully.");
+    } catch (e) {
+        console.error("Failed to update global wind cache:", e.message);
+    } finally {
+        isFetchingWind = false;
+    }
+}
+
+// Initial fetch and interval
+updateGlobalWindCache();
+setInterval(updateGlobalWindCache, 15 * 60 * 1000);
+
 function send(response, status, body, headers = {}) {
     response.writeHead(status, { 
         'X-Content-Type-Options': 'nosniff', 
@@ -99,6 +196,14 @@ createServer((request, response) => {
     }
     if (requestUrl.pathname.startsWith('/api/weather/')) {
         handleWeather(requestUrl, response);
+        return;
+    }
+    if (requestUrl.pathname === '/api/wind') {
+        if (!globalWindData) {
+            send(response, 503, JSON.stringify({ error: 'Wind data is initializing, please try again soon.' }), { 'Content-Type': 'application/json; charset=utf-8' });
+        } else {
+            send(response, 200, globalWindData, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=300' });
+        }
         return;
     }
     handleStatic(requestUrl, response);
