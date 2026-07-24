@@ -57,14 +57,25 @@
 
         async _handleMapClick(e) {
             if (!this.active) return;
+            
+            // Immediate visual feedback to prevent spam-clicking confusion
+            const loadingPopup = L.popup({ className: 'dark-popup', closeOnClick: true })
+                .setLatLng(e.latlng)
+                .setContent('<div style="font-family: Inter, sans-serif; font-size: 12px; color: #8b98a5; padding: 5px; text-align: center;">Fetching data...</div>')
+                .openOn(this._map);
+
             const lat = e.latlng.lat.toFixed(2);
             const lon = e.latlng.lng.toFixed(2);
             
             try {
-                // Fetch precise point data in knots
                 const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=kn`;
                 const res = await fetch(url);
-                if (!res.ok) return;
+                
+                if (!res.ok) {
+                    loadingPopup.setContent('<div style="font-family: Inter, sans-serif; font-size: 12px; color: #f54263; padding: 5px; text-align: center;">API Rate Limit.<br>Please wait a second.</div>');
+                    return;
+                }
+                
                 const data = await res.json();
                 
                 if (data && data.current && typeof data.current.wind_speed_10m === 'number') {
@@ -97,7 +108,7 @@
                     
                     let state = 0;
                     span.addEventListener('click', (ev) => {
-                        ev.stopPropagation(); // Prevent map click
+                        ev.stopPropagation(); 
                         state = (state + 1) % 3;
                         if (state === 0) span.innerText = speedKn.toFixed(1) + ' kt';
                         else if (state === 1) span.innerText = (speedKn * 1.852).toFixed(1) + ' km/h';
@@ -108,15 +119,13 @@
                     container.appendChild(title);
                     container.appendChild(valueDiv);
                     
-                    L.popup({
-                        className: 'dark-popup'
-                    })
-                        .setLatLng(e.latlng)
-                        .setContent(container)
-                        .openOn(this._map);
+                    loadingPopup.setContent(container);
+                } else {
+                    loadingPopup.setContent('<div style="font-family: Inter, sans-serif; font-size: 12px; color: #f54263; padding: 5px; text-align: center;">No data here.</div>');
                 }
             } catch(err) {
                 console.warn("Click fetch error:", err);
+                loadingPopup.setContent('<div style="font-family: Inter, sans-serif; font-size: 12px; color: #f54263; padding: 5px; text-align: center;">Network Error</div>');
             }
         },
 
