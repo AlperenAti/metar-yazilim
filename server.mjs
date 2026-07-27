@@ -256,6 +256,6 @@ createServer((request, response) => {
         return;
     }
     handleStatic(requestUrl, response);
-}).listen(PORT, () => {
-    console.log(`METAR Airspace is ready at http://localhost:${PORT}`);
+}).listen(PORT, '0.0.0.0', () => {
+    console.log(`METAR Airspace is ready at http://0.0.0.0:${PORT}`);
 });
