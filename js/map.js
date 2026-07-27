@@ -10,6 +10,124 @@
     });
     darkLayer.addTo(map);
 
+    // --- Distance Measurement Tool ---
+    let measureMode = false;
+    let measurePoints = [];
+    let measureLine = null;
+    let measureTempLine = null;
+    let measureTooltip = null;
+    let measureMarkers = [];
+
+    let toggleMeasureMode = null;
+
+    const MeasureControl = L.Control.extend({
+        options: { position: 'topright' },
+        onAdd: function () {
+            const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            container.style.backgroundColor = 'rgba(15, 23, 42, 0.9)';
+            container.style.color = '#fff';
+            container.style.cursor = 'pointer';
+            container.style.width = '34px';
+            container.style.height = '34px';
+            container.style.display = 'flex';
+            container.style.alignItems = 'center';
+            container.style.justifyContent = 'center';
+            container.style.borderRadius = '8px';
+            container.style.border = '1px solid rgba(255,255,255,0.1)';
+            container.style.backdropFilter = 'blur(10px)';
+            container.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
+            container.title = 'Measure Distance (Click to toggle)';
+            // Ruler icon
+            container.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21L3 3M21 3L3 21"/></svg>`; 
+
+            toggleMeasureMode = function () {
+                measureMode = !measureMode;
+                if (measureMode) {
+                    container.style.backgroundColor = '#0ea5e9';
+                    document.getElementById('map').style.cursor = 'crosshair';
+                    clearMeasure();
+                } else {
+                    container.style.backgroundColor = 'rgba(15, 23, 42, 0.9)';
+                    document.getElementById('map').style.cursor = '';
+                    clearMeasure();
+                }
+            };
+
+            container.onclick = function (e) {
+                L.DomEvent.stopPropagation(e);
+                toggleMeasureMode();
+            };
+            return container;
+        }
+    });
+    map.addControl(new MeasureControl());
+
+    function clearMeasure() {
+        if (measureLine) map.removeLayer(measureLine);
+        if (measureTempLine) map.removeLayer(measureTempLine);
+        if (measureTooltip) map.removeLayer(measureTooltip);
+        measureMarkers.forEach(m => map.removeLayer(m));
+        measureLine = null;
+        measureTempLine = null;
+        measureTooltip = null;
+        measureMarkers = [];
+        measurePoints = [];
+    }
+
+    map.on('click', (e) => {
+        if (!measureMode) return;
+        measurePoints.push(e.latlng);
+        
+        const circle = L.circleMarker(e.latlng, {
+            radius: 4, color: '#fff', fillColor: '#0ea5e9', fillOpacity: 1, weight: 2
+        }).addTo(map);
+        measureMarkers.push(circle);
+
+        if (measurePoints.length > 1) {
+            if (!measureLine) {
+                measureLine = L.polyline(measurePoints, { color: '#0ea5e9', weight: 3, dashArray: '5, 8' }).addTo(map);
+            } else {
+                measureLine.setLatLngs(measurePoints);
+            }
+        }
+    });
+
+    map.on('mousemove', (e) => {
+        if (!measureMode || measurePoints.length === 0) return;
+        
+        const lastPt = measurePoints[measurePoints.length - 1];
+        if (!measureTempLine) {
+            measureTempLine = L.polyline([lastPt, e.latlng], { color: '#0ea5e9', weight: 3, dashArray: '5, 8', opacity: 0.6 }).addTo(map);
+        } else {
+            measureTempLine.setLatLngs([lastPt, e.latlng]);
+        }
+
+        let totalDist = 0;
+        for (let i = 0; i < measurePoints.length - 1; i++) {
+            totalDist += map.distance(measurePoints[i], measurePoints[i+1]);
+        }
+        totalDist += map.distance(lastPt, e.latlng);
+
+        const nm = (totalDist / 1852).toFixed(1);
+        const km = (totalDist / 1000).toFixed(1);
+        
+        if (!measureTooltip) {
+            measureTooltip = L.tooltip({ permanent: true, className: 'measure-tooltip', direction: 'right', offset: [15, 0] })
+                .setLatLng(e.latlng)
+                .setContent(`<b>${nm} NM</b><br><small>${km} km</small>`)
+                .addTo(map);
+        } else {
+            measureTooltip.setLatLng(e.latlng).setContent(`<b>${nm} NM</b><br><small>${km} km</small>`);
+        }
+    });
+
+    map.on('contextmenu', (e) => {
+        if (measureMode && toggleMeasureMode) {
+            toggleMeasureMode();
+        }
+    });
+    // -----------------------------
+
     const OWM_API_KEY = '4d37c40d3254d49e9304bbaf1b88b296';
     let currentWeatherLayer = null;
 

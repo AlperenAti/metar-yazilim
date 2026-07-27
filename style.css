@@ -739,3 +739,25 @@ body.earth-active .map-weather-controls { display: none !important; }
     line-height: 1.6;
     margin-bottom: 4px;
 }
+/* Measure Distance Tooltip */
+.measure-tooltip {
+    background-color: #1e293b;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    padding: 6px 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    text-align: center;
+    line-height: 1.4;
+}
+.measure-tooltip b {
+    color: #38bdf8;
+    font-size: 14px;
+}
+.measure-tooltip small {
+    color: #94a3b8;
+    font-size: 11px;
+}
+.measure-tooltip.leaflet-tooltip-left::before { border-left-color: #1e293b; }
+.measure-tooltip.leaflet-tooltip-right::before { border-right-color: #1e293b; }
