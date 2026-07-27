@@ -78,30 +78,33 @@ window.EarthView = (function() {
                 }
             });
 
-        // Add custom layer for clouds
-        globe.customThreeObject(d => {
-            if (d.type !== 'clouds' || !window.THREE) return null;
-            if (cloudMesh) return cloudMesh; // Reuse if already created
-            
-            const globeRadius = globe.getGlobeRadius();
-            cloudMesh = new THREE.Mesh(
-                new THREE.SphereGeometry(globeRadius * 1.005, 72, 72),
-                new THREE.MeshBasicMaterial({ 
-                    map: new THREE.TextureLoader().load('https://realearth.ssec.wisc.edu/api/image?products=globalir&width=2048&height=1024'),
-                    transparent: true,
-                    opacity: 0.6,
-                    blending: THREE.AdditiveBlending,
-                    depthWrite: false
-                })
-            );
-            
-            (function rotateClouds() {
-                if(cloudMesh) cloudMesh.rotation.y -= 0.0002;
-                requestAnimationFrame(rotateClouds);
-            })();
-            
-            return cloudMesh;
-        });
+        // Add Live Cloud Layer manually to the scene (official example way)
+        let cloudTextureLoaded = false;
+        if (window.THREE) {
+            new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/clouds.png', cloudsTexture => {
+                const globeRadius = globe.getGlobeRadius();
+                cloudMesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(globeRadius * 1.004, 73, 73),
+                    new THREE.MeshPhongMaterial({ 
+                        map: cloudsTexture, 
+                        transparent: true, 
+                        opacity: 0.8
+                    })
+                );
+                cloudTextureLoaded = true;
+                
+                // Only add if clouds are currently selected in UI
+                const cloudRadio = document.querySelector('input[name="weather_layer"][value="clouds"]');
+                if (cloudRadio && cloudRadio.checked) {
+                    globe.scene().add(cloudMesh);
+                }
+                
+                (function rotateClouds() {
+                    if (cloudMesh) cloudMesh.rotation.y -= 0.0002;
+                    requestAnimationFrame(rotateClouds);
+                })();
+            });
+        }
 
         // Auto-rotate disabled per user request
         globe.controls().autoRotate = false;
@@ -141,21 +144,18 @@ window.EarthView = (function() {
         // Wire up Weather Layer Toggle (Clouds)
         document.getElementsByName('weather_layer').forEach(radio => {
             radio.addEventListener('change', (e) => {
+                if (!cloudMesh || !globe) return;
                 if (e.target.value === 'clouds') {
-                    globe.customLayerData([{ type: 'clouds' }]);
+                    if (!globe.scene().children.includes(cloudMesh)) {
+                        globe.scene().add(cloudMesh);
+                    }
                 } else {
-                    globe.customLayerData([]);
+                    if (globe.scene().children.includes(cloudMesh)) {
+                        globe.scene().remove(cloudMesh);
+                    }
                 }
             });
         });
-
-        // Set initial cloud state if already checked in UI
-        const cloudRadio = document.querySelector('input[name="weather_layer"][value="clouds"]');
-        if (cloudRadio && cloudRadio.checked) {
-            globe.customLayerData([{ type: 'clouds' }]);
-        } else {
-            globe.customLayerData([]); // Ensure it's hidden initially if not checked
-        }
 
         initialized = true;
     };
@@ -174,11 +174,17 @@ window.EarthView = (function() {
                 globe.height([container.clientHeight]);
                 
                 // Sync cloud state when switching back to Earth
-                const cloudRadio = document.querySelector('input[name="weather_layer"][value="clouds"]');
-                if (cloudRadio && cloudRadio.checked) {
-                    globe.customLayerData([{ type: 'clouds' }]);
-                } else {
-                    globe.customLayerData([]);
+                if (cloudMesh && globe) {
+                    const cloudRadio = document.querySelector('input[name="weather_layer"][value="clouds"]');
+                    if (cloudRadio && cloudRadio.checked) {
+                        if (!globe.scene().children.includes(cloudMesh)) {
+                            globe.scene().add(cloudMesh);
+                        }
+                    } else {
+                        if (globe.scene().children.includes(cloudMesh)) {
+                            globe.scene().remove(cloudMesh);
+                        }
+                    }
                 }
             }
         }
