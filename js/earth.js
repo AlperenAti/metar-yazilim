@@ -21,7 +21,7 @@ window.EarthView = (function() {
             altFactor: 1.004,
             opacity: 0.9,
             blending: 'AdditiveBlending', // Additive blending hides black backgrounds (which this JPEG has)
-            rotate: true
+            rotate: false
         },
         precipitation: {
             // Omitting the TIME parameter tells NASA GIBS to fetch the latest available real-time snapshot
@@ -167,7 +167,9 @@ window.EarthView = (function() {
                     lat: parseFloat(point.lat),
                     lon: parseFloat(point.lon),
                     runwayHeading: point.rh || 0,
-                    elevation: point.e || 0
+                    elevation: point.e || 0,
+                    rwy: point.r || [],
+                    freqs: point.f || []
                 };
                 if (window.UI && window.UI.openAirport) {
                     document.getElementById('dashboard').classList.remove('collapsed');
