@@ -450,7 +450,6 @@
         window.history.replaceState({}, '', url);
         refreshAirportWeather();
         window.App?.refreshAirportTraffic(airport);
-        window.NotamManager?.loadForAirport(airport.icao);
     }
 
     function closeAirport() {

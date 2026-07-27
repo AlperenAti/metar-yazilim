@@ -187,7 +187,6 @@
                 <button data-tab="info" class="tab" type="button">Info</button>
                 <button data-tab="weather" class="tab active" type="button">Weather</button>
                 <button data-tab="atis" class="tab" type="button">ATIS</button>
-                <button data-tab="notam" class="tab" type="button">NOTAM</button>
                 <button data-tab="traffic" class="tab" type="button">Nearby flights</button>
             </nav>
 
@@ -248,21 +247,7 @@
                     </div>
                 </section>
                 
-                <section id="tab-notam" class="tab-panel" aria-labelledby="NOTAM Information">
-                    <div class="notam-filters">
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="notam-critical-only" checked>
-                            <span class="toggle-slider"></span>
-                            <span class="toggle-label">Important NOTAMs</span>
-                        </label>
-                    </div>
-                    <div id="notam-list-container">
-                        <p class="empty-state">Loading NOTAM data...</p>
-                    </div>
-                    <div class="notam-external-link">
-                        <a id="notam-official-link" href="#" target="_blank" rel="noopener noreferrer" class="btn-secondary">FAA NOTAM Portal</a>
-                    </div>
-                </section>
+
 
                 <section id="tab-traffic" class="tab-panel" aria-labelledby="Live Traffic">
                     <div class="data-status"><i></i><span id="airport-traffic-status">ADS-B traffic around airport</span></div>
@@ -414,7 +399,6 @@
     <script src="js/taf-forecast.js"></script>
     <script src="js/visualizer.js"></script>
     <script src="js/sigmet.js"></script>
-    <script src="js/notam.js"></script>
     <script src="js/atis.js"></script>
     <script src="js/wind-particles.js"></script>
     <script src="js/ui.js"></script>
