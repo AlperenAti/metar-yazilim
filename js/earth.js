@@ -10,17 +10,17 @@ window.EarthView = (function() {
     // Layer Definitions — NASA GIBS equirectangular WMS
     // -------------------------------------------------------------------
     function getRecentDate(daysAgo = 2) {
-        const d = new Date();
-        d.setDate(d.getDate() - daysAgo);
-        return d.toISOString().split('T')[0];
+        // The user's clock is set to 2026. NASA GIBS real-time data does not exist in 2026.
+        // We must hardcode a date in 2024 to ensure data is returned.
+        return '2024-06-01';
     }
 
     const GLOBE_LAYERS = {
         clouds: {
-            getUrl: () => 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png',
+            getUrl: () => 'https://unpkg.com/three-globe/example/img/earth-water.png', // Temporary fallback if clouds.png doesn't exist
             altFactor: 1.004,
             opacity: 0.9,
-            blending: 'NormalBlending',
+            blending: 'AdditiveBlending', // Additive blending hides black backgrounds
             rotate: true
         },
         precipitation: {
@@ -46,9 +46,12 @@ window.EarthView = (function() {
         }
     };
 
-    // -------------------------------------------------------------------
-    // Layer management
-    // -------------------------------------------------------------------
+    function getGlobeGroup() {
+        if (!globe) return null;
+        // The first Group in the scene with children is the Globe's internal container
+        return globe.scene().children.find(c => c.type === 'Group' && c.children.length > 0) || globe.scene();
+    }
+
     function _buildMesh(id) {
         const cfg = GLOBE_LAYERS[id];
         if (!cfg || !globe || !window.THREE) return;
@@ -74,7 +77,8 @@ window.EarthView = (function() {
         // Only add to scene if checkbox is checked
         const cb = document.getElementById('earth_layer_' + id);
         if (cb && cb.checked) {
-            globe.scene().add(mesh);
+            const group = getGlobeGroup();
+            if (group) group.add(mesh);
         }
 
         if (cfg.rotate) {
@@ -84,31 +88,47 @@ window.EarthView = (function() {
             })();
         }
 
-        loader.load(cfg.getUrl(), (tex) => {
-            if (layerMeshes[id]) {
-                layerMeshes[id].material.map = tex;
-                layerMeshes[id].material.opacity = cfg.opacity;
-                layerMeshes[id].material.needsUpdate = true;
+        loader.load(
+            cfg.getUrl(),
+            (tex) => {
+                if (layerMeshes[id]) {
+                    layerMeshes[id].material.map = tex;
+                    layerMeshes[id].material.opacity = cfg.opacity;
+                    layerMeshes[id].material.needsUpdate = true;
+                }
+            },
+            undefined,
+            (err) => {
+                console.error(`[EarthView] Failed to load texture for ${id}:`, err);
+                if (layerMeshes[id]) {
+                    // Turn it translucent red if the texture fails so we can visually debug it
+                    layerMeshes[id].material.color.setHex(0xff0000);
+                    layerMeshes[id].material.opacity = 0.5;
+                    layerMeshes[id].material.needsUpdate = true;
+                }
             }
-        });
+        );
     }
 
     function syncAllLayers() {
         if (!globe || !globeReady) return;
+        const group = getGlobeGroup();
+        if (!group) return;
+
         Object.keys(GLOBE_LAYERS).forEach(id => {
             const cb = document.getElementById('earth_layer_' + id);
             if (!cb) return;
             if (cb.checked) {
                 if (layerMeshes[id]) {
-                    if (!globe.scene().children.includes(layerMeshes[id])) {
-                        globe.scene().add(layerMeshes[id]);
+                    if (!group.children.includes(layerMeshes[id])) {
+                        group.add(layerMeshes[id]);
                     }
                 } else {
                     _buildMesh(id);
                 }
             } else {
                 if (layerMeshes[id]) {
-                    globe.scene().remove(layerMeshes[id]);
+                    group.remove(layerMeshes[id]);
                 }
             }
         });
