@@ -17,28 +17,29 @@ window.EarthView = (function() {
 
     const GLOBE_LAYERS = {
         clouds: {
-            getUrl: () => 'https://unpkg.com/three-globe/example/img/earth-water.png', // Temporary fallback if clouds.png doesn't exist
+            getUrl: () => 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png',
             altFactor: 1.004,
             opacity: 0.9,
-            blending: 'AdditiveBlending', // Additive blending hides black backgrounds
+            blending: 'AdditiveBlending', // Additive blending hides black backgrounds (which this JPEG has)
             rotate: true
         },
         precipitation: {
-            getUrl: () => `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=IMERG_Precipitation_Rate&TIME=${getRecentDate(3)}&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`,
+            // Omitting the TIME parameter tells NASA GIBS to fetch the latest available real-time snapshot
+            getUrl: () => `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=IMERG_Precipitation_Rate&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`,
             altFactor: 1.006,
             opacity: 0.85,
             blending: 'AdditiveBlending',
             rotate: false
         },
         temperature: {
-            getUrl: () => `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=MODIS_Terra_Land_Surface_Temp_Day&TIME=${getRecentDate(3)}&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`,
+            getUrl: () => `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=MODIS_Terra_Land_Surface_Temp_Day&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`,
             altFactor: 1.002,
             opacity: 0.65,
             blending: 'AdditiveBlending',
             rotate: false
         },
         wind: {
-            getUrl: () => `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=GEOS-5_FPIT_Wind_Speed_10m&TIME=${getRecentDate(3)}&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`,
+            getUrl: () => `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=GEOS-5_FPIT_Wind_Speed_10m&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`,
             altFactor: 1.003,
             opacity: 0.55,
             blending: 'AdditiveBlending',
