@@ -152,7 +152,7 @@
 
         let varName = '';
         if (activeLayer === 'temperature') varName = 'temperature_2m';
-        else if (activeLayer === 'pressure') varName = 'surface_pressure';
+        else if (activeLayer === 'pressure') varName = 'pressure_msl';
         else if (activeLayer === 'wind') varName = 'wind_speed_10m';
         else if (activeLayer === 'clouds') varName = 'cloud_cover';
         else if (activeLayer === 'radar') varName = 'precipitation';
