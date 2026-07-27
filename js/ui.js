@@ -26,6 +26,22 @@
     let toastTimer = null;
     let dashboardChartInstances = {};
 
+    function renderChartError(message) {
+        ['chart-temp', 'chart-wind', 'chart-qnh'].forEach(id => {
+            const el = $(id);
+            if (el && el.parentNode) {
+                // Ensure we only show error if the canvas is still empty
+                if (el.parentNode.querySelector('.chart-error')) return;
+                const err = document.createElement('div');
+                err.className = 'chart-error';
+                err.style = 'position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#ff6d74; font-size:14px; font-weight:600; text-align:center; width:100%; padding:0 20px;';
+                err.textContent = message;
+                el.parentNode.appendChild(err);
+                el.style.opacity = '0.1'; // dim the canvas
+            }
+        });
+    }
+
     function showToast(message, type = '') {
         window.clearTimeout(toastTimer);
         toast.textContent = message;
@@ -666,17 +682,14 @@
     
     async function renderCharts(icao) {
         if (!window.Chart) {
-            console.error('Chart.js not loaded yet.');
+            renderChartError('Chart.js library failed to load via CDN.');
             return;
         }
         
-        // Show loading state
-        const chartContainers = ['chart-temp', 'chart-wind', 'chart-qnh'];
-        chartContainers.forEach(id => {
-            const ctx = $(id);
-            if (ctx && ctx.parentNode) {
-                // We could add a loading spinner here, but let's just rely on the API speed
-            }
+        // Remove old errors
+        document.querySelectorAll('.chart-error').forEach(e => e.remove());
+        ['chart-temp', 'chart-wind', 'chart-qnh'].forEach(id => {
+            if ($(id)) $(id).style.opacity = '1';
         });
 
         // Destroy existing charts
@@ -687,10 +700,14 @@
             }
         });
 
-        const history = await window.API.fetchHistoricalMetar(icao);
-        if (!history || history.length === 0) return;
-        
-        const chron = history.reverse();
+        try {
+            const history = await window.API.fetchHistoricalMetar(icao);
+            if (!history || history.length === 0) {
+                renderChartError('Historical data unavailable from API.');
+                return;
+            }
+            
+            const chron = history.reverse();
         
         // If we only got 1 point (e.g. server hasn't updated yet to support hours=24), ensure pointRadius > 0 so it's visible.
         const pRadius = chron.length === 1 ? 4 : 2;
@@ -755,6 +772,11 @@
             },
             options: { ...commonOptions, plugins: { title: { display: true, text: 'QNH (hPa)', color: '#fff' } } }
         });
+
+        } catch (e) {
+            console.error(e);
+            renderChartError(`Error rendering chart: ${e.message}`);
+        }
     }
 
     function renderFullDashboard(airport) {

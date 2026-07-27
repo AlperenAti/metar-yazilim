@@ -264,16 +264,16 @@ button { color: inherit; }
 }
 .full-dashboard-view {
     position: absolute;
-    top: 60px; /* Below header */
+    top: 0;
     left: 0;
     width: 100%;
-    height: calc(100vh - 60px);
-    background: #00458b; /* Blue background similar to metar-taf.com */
-    z-index: 2000;
+    height: 100vh;
+    background: linear-gradient(180deg, #07111d 0%, #00458b 150px, #00458b 100%);
+    z-index: 1200;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    padding: 40px;
+    padding: 100px 40px 40px 40px;
     color: #fff;
 }
 .full-dashboard-view.hidden {
