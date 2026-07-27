@@ -654,7 +654,8 @@ body.earth-active .map-weather-controls { display: none !important; }
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .05em;
-    padding: 10px 14px 10px 0;
+    padding: 10px 14px;
+    text-align: center;
     white-space: nowrap;
     min-width: 85px;
     border-right: 1px solid rgba(255,255,255,.15);
