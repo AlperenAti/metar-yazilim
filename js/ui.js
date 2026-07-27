@@ -1073,6 +1073,15 @@
             $('weather-menu-btn').classList.remove('active');
             $('weather-menu-panel').classList.add('hidden');
         });
+
+        $('earth-menu-btn').addEventListener('click', () => {
+            $('earth-menu-btn').classList.toggle('active');
+            $('earth-menu-panel').classList.toggle('hidden');
+        });
+        $('close-earth-menu').addEventListener('click', () => {
+            $('earth-menu-btn').classList.remove('active');
+            $('earth-menu-panel').classList.add('hidden');
+        });
         document.getElementsByName('weather_layer').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 if (e.target.checked) window.MapManager.setWeatherOverlay(e.target.value);

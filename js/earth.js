@@ -32,13 +32,13 @@ window.EarthView = (function() {
                     icao: point.i,
                     name: point.n,
                     lat: point.lat,
-                    lon: point.lon
+                    lon: point.lon,
+                    runwayHeading: point.rh || 0,
+                    elevation: point.e || 0
                 };
-                if (window.MapManager && window.MapManager.onAirportClick) {
-                    window.MapManager.onAirportClick(mappedPoint);
-                } else if (window.UIManager && window.UIManager.fetchAndPopulateDashboard) {
-                    window.UIManager.fetchAndPopulateDashboard(point.i);
-                    document.getElementById('view-list-btn').click(); 
+                if (window.UI && window.UI.openAirport) {
+                    document.getElementById('dashboard').classList.remove('collapsed');
+                    window.UI.openAirport(mappedPoint, false);
                 }
             })
             .onGlobeReady(() => {
@@ -142,7 +142,7 @@ window.EarthView = (function() {
         });
 
         // Wire up Weather Layer Toggle (Clouds)
-        document.getElementsByName('weather_layer').forEach(radio => {
+        document.getElementsByName('earth_weather_layer').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 if (!cloudMesh || !globe) return;
                 if (e.target.value === 'clouds') {
@@ -175,7 +175,7 @@ window.EarthView = (function() {
                 
                 // Sync cloud state when switching back to Earth
                 if (cloudMesh && globe) {
-                    const cloudRadio = document.querySelector('input[name="weather_layer"][value="clouds"]');
+                    const cloudRadio = document.querySelector('input[name="earth_weather_layer"][value="clouds"]');
                     if (cloudRadio && cloudRadio.checked) {
                         if (!globe.scene().children.includes(cloudMesh)) {
                             globe.scene().add(cloudMesh);

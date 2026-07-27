@@ -61,7 +61,8 @@
             <div id="earth-container"></div>
         </div>
 
-        <div class="weather-controls">
+        <!-- 2D Map Weather Controls -->
+        <div class="weather-controls map-weather-controls">
             <button id="weather-menu-btn" class="map-control-btn" aria-label="Weather menu">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19C19.985 19 22 16.985 22 14.5C22 12.133 20.176 10.187 17.864 10.016C17.202 6.55 14.168 4 10.5 4C6.358 4 3 7.358 3 11.5C3 12.023 3.053 12.533 3.155 13.027C1.933 13.593 1 14.862 1 16.5C1 18.433 2.567 20 4.5 20H17.5Z"/></svg>
             </button>
@@ -76,15 +77,35 @@
                     <label class="radio-row"><input type="radio" name="weather_layer" value="radar"><span>Precipitation Radar</span></label>
                     <label class="radio-row"><input type="radio" name="weather_layer" value="wind_grid"><span>Wind Grid (Live)</span></label>
                 </div>
-                <div class="weather-options" style="margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.1);">
+                <div class="weather-provider-info">
+                    Data provided by <b>OpenWeather</b>, <b>RainViewer</b> & <b>Open-Meteo</b>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3D Earth Settings Controls -->
+        <div class="weather-controls earth-weather-controls">
+            <button id="earth-menu-btn" class="map-control-btn" aria-label="Earth menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19C19.985 19 22 16.985 22 14.5C22 12.133 20.176 10.187 17.864 10.016C17.202 6.55 14.168 4 10.5 4C6.358 4 3 7.358 3 11.5C3 12.023 3.053 12.533 3.155 13.027C1.933 13.593 1 14.862 1 16.5C1 18.433 2.567 20 4.5 20H17.5Z"/></svg>
+            </button>
+            <div id="earth-menu-panel" class="weather-menu-panel glass-panel hidden">
+                <div class="weather-menu-header">
+                    <h3>3D Globe Settings</h3>
+                    <button id="close-earth-menu" class="close-button" type="button">×</button>
+                </div>
+                <div class="weather-options" style="margin-bottom:15px;">
                     <div class="weather-menu-header" style="margin-bottom:10px;">
-                        <h3 style="font-size:13px; color:#a0aec0;">Globe Quality (3D)</h3>
+                        <h3 style="font-size:13px; color:#a0aec0;">Weather</h3>
+                    </div>
+                    <label class="radio-row"><input type="radio" name="earth_weather_layer" value="none" checked><span>None</span></label>
+                    <label class="radio-row"><input type="radio" name="earth_weather_layer" value="clouds"><span>Clouds (Live)</span></label>
+                </div>
+                <div class="weather-options" style="padding-top:15px; border-top:1px solid rgba(255,255,255,0.1);">
+                    <div class="weather-menu-header" style="margin-bottom:10px;">
+                        <h3 style="font-size:13px; color:#a0aec0;">Globe Quality</h3>
                     </div>
                     <label class="radio-row"><input type="radio" name="globe_quality" value="standard" checked><span>Standard (Fast)</span></label>
                     <label class="radio-row"><input type="radio" name="globe_quality" value="high"><span>8K Ultra (High Data)</span></label>
-                </div>
-                <div class="weather-provider-info">
-                    Data provided by <b>OpenWeather</b>, <b>RainViewer</b> & <b>Open-Meteo</b>
                 </div>
             </div>
         </div>
