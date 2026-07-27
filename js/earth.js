@@ -22,28 +22,6 @@ window.EarthView = (function() {
             opacity: 0.9,
             blending: 'AdditiveBlending', // Additive blending hides black backgrounds (which this JPEG has)
             rotate: false
-        },
-        precipitation: {
-            // Omitting the TIME parameter tells NASA GIBS to fetch the latest available real-time snapshot
-            getUrl: () => `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=IMERG_Precipitation_Rate&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`,
-            altFactor: 1.006,
-            opacity: 0.85,
-            blending: 'AdditiveBlending',
-            rotate: false
-        },
-        temperature: {
-            getUrl: () => `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=MODIS_Terra_Land_Surface_Temp_Day&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`,
-            altFactor: 1.002,
-            opacity: 0.65,
-            blending: 'AdditiveBlending',
-            rotate: false
-        },
-        wind: {
-            getUrl: () => `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=GEOS-5_FPIT_Wind_Speed_10m&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`,
-            altFactor: 1.003,
-            opacity: 0.55,
-            blending: 'AdditiveBlending',
-            rotate: false
         }
     };
 
