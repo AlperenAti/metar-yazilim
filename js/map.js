@@ -122,6 +122,47 @@
 
     map.on('moveend zoomend', refreshVisibleAirports);
 
+    map.on('contextmenu', async (e) => {
+        const { lat, lng } = e.latlng;
+        
+        // Show a loading popup immediately
+        const popup = L.popup()
+            .setLatLng(e.latlng)
+            .setContent(`<div style="text-align:center;font-family:'Inter',sans-serif;font-size:13px;padding:4px;">
+                <div style="color:#a0aec0;font-size:11px;margin-bottom:6px;">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+                <div style="color:#e2e8f0;">Loading location...</div>
+            </div>`)
+            .openOn(map);
+
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`);
+            const data = await res.json();
+            
+            let locationText = 'Unknown Location';
+            if (data && data.address) {
+                const city = data.address.city || data.address.town || data.address.village || data.address.county || data.address.state || '';
+                const country = data.address.country || '';
+                if (city && country) {
+                    locationText = `${city}, <strong style="color:#fff;">${country}</strong>`;
+                } else if (country) {
+                    locationText = `<strong style="color:#fff;">${country}</strong>`;
+                }
+            } else if (data && data.error) {
+                locationText = 'International Waters / No Data';
+            }
+
+            popup.setContent(`<div style="text-align:center;font-family:'Inter',sans-serif;font-size:13px;padding:4px;">
+                <div style="color:#a0aec0;font-size:11px;margin-bottom:6px;">${lat.toFixed(4)}°, ${lng.toFixed(4)}°</div>
+                <div style="color:#90cdf4;margin-top:4px;font-size:14px;">${locationText}</div>
+            </div>`);
+        } catch (err) {
+            popup.setContent(`<div style="text-align:center;font-family:'Inter',sans-serif;font-size:13px;padding:4px;">
+                <div style="color:#a0aec0;font-size:11px;margin-bottom:6px;">${lat.toFixed(4)}°, ${lng.toFixed(4)}°</div>
+                <div style="color:#f87171;margin-top:4px;">Location check failed</div>
+            </div>`);
+        }
+    });
+
     fetch('data/airports.json')
         .then(res => res.json())
         .then(data => {
