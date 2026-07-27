@@ -754,6 +754,201 @@ body.earth-active .map-weather-controls { display: none !important; }
 .measure-tooltip b {
     color: #38bdf8;
     font-size: 14px;
+    transition: background 0.1s;
+}
+.autocomplete-list li:last-child {
+    border-bottom: none;
+}
+.autocomplete-list li:hover {
+    background: rgba(77, 166, 255, 0.15);
+}
+.autocomplete-list li strong {
+    color: #4da6ff;
+    font-weight: 700;
+}
+.autocomplete-list.hidden {
+    display: none;
+}
+
+#open-dashboard-btn {
+    background: var(--brand-dim);
+    color: var(--brand);
+    border: 1px solid var(--brand);
+    border-radius: 6px;
+    font-weight: 600;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+#open-dashboard-btn:hover {
+    background: var(--brand);
+    color: var(--surface-strong);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--brand-dim);
+}
+
+.taf-gantt-container { display: flex; flex-direction: column; gap: 8px; }
+.taf-gantt-item { padding: 12px; border-radius: 8px; background: var(--surface-strong); border-left: 4px solid var(--brand); box-shadow: 0 4px 12px var(--shadow); }
+.taf-gantt-time { font-size: 11px; font-weight: 700; color: var(--brand); margin-bottom: 4px; text-transform: uppercase; }
+.taf-gantt-content { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--ink); white-space: pre-wrap; }
+.category-vfr { border-left-color: #229a6c !important; }
+.category-mvfr { border-left-color: #2386d4 !important; }
+.category-ifr { border-left-color: #d35c55 !important; }
+.category-lifr { border-left-color: #a350b3 !important; }
+
+/* Earth View Styles */
+#earth-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; background: #000; overflow: hidden; }
+#earth-loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 12; color: var(--brand); font-family: 'DM Mono', monospace; transition: opacity 0.5s ease; }
+.earth-spinner { width: 40px; height: 40px; border: 3px solid rgba(0, 240, 255, 0.2); border-top-color: var(--brand); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#earth-container { width: 100%; height: 100%; cursor: grab; transition: opacity 1s ease; }
+#earth-container:active { cursor: grabbing; }
+
+/* Dashboard adjustments when earth is active */
+body.earth-active #earth-wrapper { display: block; }
+body:not(.earth-active) #earth-wrapper { display: none; }
+
+.map-weather-controls { left: 380px; }
+.dashboard.collapsed ~ .map-weather-controls { transform: translateX(-360px); }
+.earth-weather-controls { left: 20px; display: none; }
+body.earth-active .earth-weather-controls { display: flex; }
+body.earth-active .map-weather-controls { display: none !important; }
+
+.check-row { display:flex; align-items:center; gap:10px; cursor:pointer; padding:5px 2px; border-radius:6px; transition:.15s; }
+.check-row:hover { background:rgba(255,255,255,0.04); }
+.check-row input[type=checkbox] { accent-color:var(--brand); width:15px; height:15px; cursor:pointer; flex-shrink:0; }
+.check-row span { font-size:13px; color:var(--ink-muted); }
+.check-row input[type=checkbox]:checked + span { color:var(--brand); }
+.weather-menu-panel { min-width:260px; }
+
+/* ============================================================
+   TAF Forecast Hourly Table
+   ============================================================ */
+.forecast-table-block { padding: 0 0 4px 0; }
+.forecast-table-block .block-heading { padding: 0 20px 10px; }
+
+/* Scrollable outer wrapper */
+.tf-scroll-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 20px 8px; }
+.tf-scroll-outer::-webkit-scrollbar { height: 4px; }
+.tf-scroll-outer::-webkit-scrollbar-track { background: transparent; }
+.tf-scroll-outer::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 4px; }
+
+/* Table base */
+.tf-table { border-collapse: collapse; min-width: max-content; font-size: 12px; }
+
+/* Row label (frozen left col) */
+.tf-label {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: rgba(11, 35, 71, 0.95);
+    backdrop-filter: blur(8px);
+    color: #e2e8f0;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: 10px 14px;
+    text-align: center;
+    white-space: nowrap;
+    min-width: 85px;
+    border-right: 1px solid rgba(255,255,255,.15);
+}
+
+/* Data cells */
+.tf-cell {
+    text-align: center;
+    padding: 6px 10px;
+    min-width: 58px;
+    border-right: 1px solid rgba(255,255,255,.04);
+    vertical-align: middle;
+    color: #e2e8f0;
+    font-size: 12px;
+    line-height: 1.4;
+}
+.tf-cell.tf-muted { color: #a0aec0; }
+.tf-now { background: rgba(102,126,234,.12); position: relative; }
+.tf-now::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: #667eea; }
+
+/* Row: Time */
+.tf-row-time .tf-cell { color: #a0aec0; font-size: 11px; padding-top: 10px; padding-bottom: 6px; }
+.tf-row-time .tf-cell strong { color: #e2e8f0; font-size: 13px; display: block; }
+
+/* Row: Flight cat badge */
+.tf-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    color: #fff;
+}
+
+/* Row: Weather */
+.tf-row-wx .tf-cell { padding-top: 8px; padding-bottom: 8px; }
+.tf-wx-icon { font-size: 22px; line-height: 1; margin-bottom: 3px; }
+.tf-wx-lbl { font-size: 10px; color: #a0aec0; }
+
+/* Row: Sun */
+.tf-row-sun .tf-cell { font-size: 10px; }
+.tf-sun-rise { color: #fbbf24; }
+.tf-sun-set  { color: #f97316; }
+
+/* Alternating row shade */
+.tf-table tr:nth-child(even) .tf-cell { background: rgba(255,255,255,.018); }
+.tf-table tr:nth-child(even) .tf-now  { background: rgba(102,126,234,.14); }
+
+/* ============================================================
+   Forecast explanation block
+   ============================================================ */
+.tf-explanation {
+    padding: 16px 20px 8px;
+    border-top: 1px solid rgba(255,255,255,.07);
+    margin-top: 4px;
+}
+.tf-explanation h4 {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: #90cdf4;
+    margin: 0 0 16px;
+}
+.tf-exp-group { margin-bottom: 16px; }
+.tf-exp-heading {
+    font-size: 14px;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin-bottom: 6px;
+}
+.tf-exp-bullets {
+    margin: 0;
+    padding-left: 18px;
+    list-style: disc;
+}
+.tf-exp-bullets li {
+    font-size: 13px;
+    color: #cbd5e1;
+    line-height: 1.6;
+    margin-bottom: 4px;
+}
+/* Measure Distance Tooltip */
+.measure-tooltip {
+    background-color: #1e293b;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    padding: 6px 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    text-align: center;
+    line-height: 1.4;
+}
+.measure-tooltip b {
+    color: #38bdf8;
+    font-size: 14px;
 }
 .measure-tooltip small {
     color: #94a3b8;
@@ -761,3 +956,50 @@ body.earth-active .map-weather-controls { display: none !important; }
 }
 .measure-tooltip.leaflet-tooltip-left::before { border-left-color: #1e293b; }
 .measure-tooltip.leaflet-tooltip-right::before { border-right-color: #1e293b; }
+/* Dynamic Weather Legend */
+#weather-legend-container {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 12px 18px;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 320px;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+#weather-legend-container.hidden {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+    pointer-events: none;
+}
+.legend-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    text-align: center;
+}
+.legend-gradient {
+    height: 10px;
+    border-radius: 5px;
+    width: 100%;
+}
+.legend-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    font-weight: 500;
+    color: #cbd5e1;
+}

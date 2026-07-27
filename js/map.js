@@ -556,6 +556,49 @@
         } else {
             timestampEl.classList.add('hidden');
         }
+        
+        updateWeatherLegend(type);
+    }
+
+    function updateWeatherLegend(type) {
+        const legendContainer = document.getElementById('weather-legend-container');
+        const titleEl = document.getElementById('legend-title');
+        const gradientEl = document.getElementById('legend-gradient');
+        const labelsEl = document.getElementById('legend-labels');
+        
+        if (!legendContainer || !titleEl || !gradientEl || !labelsEl) return;
+        
+        if (type === 'none' || type === 'clouds' || type === 'satellite') {
+            legendContainer.classList.add('hidden');
+            return;
+        }
+        
+        let title = '';
+        let gradient = '';
+        let labels = [];
+        
+        if (type === 'temperature') {
+            title = 'Temperature (°C)';
+            gradient = 'linear-gradient(to right, #821692, #208cec, #23dddd, #c2ff28, #fff028, #fc8014, #ff0000)';
+            labels = ['-40', '-20', '0', '10', '20', '30', '40+'];
+        } else if (type === 'wind' || type === 'wind_grid') {
+            title = 'Wind Speed (kt)';
+            gradient = 'linear-gradient(to right, #8b98a5, #4da6ff, #4ddb85, #f5c542, #f57c42, #f54263)';
+            labels = ['0', '10', '20', '30', '40', '50+'];
+        } else if (type === 'pressure') {
+            title = 'Sea Level Pressure (hPa)';
+            gradient = 'linear-gradient(to right, #0073ff, #00aafe, #4bcf00, #c9fb00, #ffcc00, #ff6600, #ff0000)';
+            labels = ['940', '960', '980', '1000', '1020', '1040+'];
+        } else if (type === 'radar') {
+            title = 'Precipitation Intensity';
+            gradient = 'linear-gradient(to right, #8BE1FA, #0036FF, #00FF00, #FFFF00, #FF0000, #FF00FF)';
+            labels = ['Light', 'Moderate', 'Heavy', 'Extreme'];
+        }
+        
+        titleEl.textContent = title;
+        gradientEl.style.background = gradient;
+        labelsEl.innerHTML = labels.map(l => `<span>${l}</span>`).join('');
+        legendContainer.classList.remove('hidden');
     }
 
     function getAircraftScale(type) {

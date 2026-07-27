@@ -28,11 +28,6 @@
             this._onClick = (e) => this._handleMapClick(e);
             this._map.on('click', this._onClick);
             
-            if (!this._legend) {
-                this._legend = new WindLegend();
-            }
-            this._legend.addTo(map);
-            
             this._fetchGrid();
         },
 
@@ -48,10 +43,6 @@
             if (this._velocityLayer) {
                 map.removeLayer(this._velocityLayer);
                 this._velocityLayer = null;
-            }
-            if (this._legend) {
-                map.removeControl(this._legend);
-                this._legend = null;
             }
         },
 
@@ -256,26 +247,6 @@
             if (this.active) {
                 this._velocityLayer.addTo(this._map);
             }
-        }
-    });
-
-    const WindLegend = L.Control.extend({
-        options: { position: 'bottomright' },
-        onAdd: function (map) {
-            const div = L.DomUtil.create('div', 'wind-legend-control');
-            // Colors: ["#8b98a5", "#4da6ff", "#4ddb85", "#f5c542", "#f57c42", "#f54263"]
-            div.innerHTML = `
-                <div class="wind-legend-title">Wind Speed (kt)</div>
-                <div class="wind-legend-scale" style="margin-bottom: 14px;">
-                    <div style="background: #8b98a5;"><span>0</span></div>
-                    <div style="background: #4da6ff;"><span>10</span></div>
-                    <div style="background: #4ddb85;"><span>20</span></div>
-                    <div style="background: #f5c542;"><span>30</span></div>
-                    <div style="background: #f57c42;"><span>40</span></div>
-                    <div style="background: #f54263;"><span>50+</span></div>
-                </div>
-            `;
-            return div;
         }
     });
 
