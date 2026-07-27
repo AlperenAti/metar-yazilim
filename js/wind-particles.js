@@ -21,8 +21,9 @@
 
             this._scheduleUpdate = () => {
                 if (this._timeout) clearTimeout(this._timeout);
-                this._timeout = setTimeout(() => this._fetchGrid(), 1000); // 1 second delay (Spam protection)
+                this._timeout = setTimeout(() => this._fetchGrid(), 1500); // 1.5 second delay (Spam protection)
             };
+            this._map.on('moveend', this._scheduleUpdate);
 
             this._onClick = (e) => this._handleMapClick(e);
             this._map.on('click', this._onClick);
@@ -39,6 +40,7 @@
             L.LayerGroup.prototype.onRemove.call(this, map);
             this.active = false;
             this._map.off('click', this._onClick);
+            this._map.off('moveend', this._scheduleUpdate);
             
             if (this._timeout) clearTimeout(this._timeout);
             if (this._abortController) this._abortController.abort();
@@ -135,14 +137,15 @@
             const signal = this._abortController.signal;
             
             try {
-                // We fetch directly from the client to avoid server IP bans.
-                // We construct a global grid.
-                const gridWidth = 20;
-                const gridHeight = 20;
-                const n = 80; 
-                const s = -80;
-                const w = -180;
-                const e = 180;
+                // Fetch dynamic grid based on current map bounds for maximum local accuracy
+                const bounds = this._map.getBounds();
+                const n = Math.min(85, bounds.getNorth() + 1);
+                const s = Math.max(-85, bounds.getSouth() - 1);
+                const w = bounds.getWest() - 1;
+                const e = bounds.getEast() + 1;
+
+                const gridWidth = 15;
+                const gridHeight = 15;
                 
                 const dy = (n - s) / (gridHeight - 1);
                 const dx = (e - w) / (gridWidth - 1);
@@ -151,7 +154,10 @@
                 for (let y = 0; y < gridHeight; y++) {
                     const lat = n - (y * dy);
                     for (let x = 0; x < gridWidth; x++) {
-                        const lon = w + (x * dx);
+                        let lon = w + (x * dx);
+                        // Normalize longitude
+                        while (lon > 180) lon -= 360;
+                        while (lon < -180) lon += 360;
                         points.push({ lat, lon });
                     }
                 }
