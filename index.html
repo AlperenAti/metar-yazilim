@@ -90,22 +90,27 @@
             </button>
             <div id="earth-menu-panel" class="weather-menu-panel glass-panel hidden">
                 <div class="weather-menu-header">
-                    <h3>3D Globe Settings</h3>
+                    <h3>3D Globe Layers</h3>
                     <button id="close-earth-menu" class="close-button" type="button">×</button>
                 </div>
                 <div class="weather-options" style="margin-bottom:15px;">
                     <div class="weather-menu-header" style="margin-bottom:10px;">
-                        <h3 style="font-size:13px; color:#a0aec0;">Weather</h3>
+                        <h3 style="font-size:12px; color:#a0aec0; text-transform:uppercase; letter-spacing:.06em;">Weather Overlays</h3>
                     </div>
-                    <label class="radio-row"><input type="radio" name="earth_weather_layer" value="none" checked><span>None</span></label>
-                    <label class="radio-row"><input type="radio" name="earth_weather_layer" value="clouds"><span>Clouds (Live)</span></label>
+                    <label class="check-row"><input type="checkbox" id="earth_layer_clouds"><span>☁️ Clouds <small style="color:#667eea;">(MODIS Live)</small></span></label>
+                    <label class="check-row"><input type="checkbox" id="earth_layer_precipitation"><span>🌧 Precipitation <small style="color:#667eea;">(IMERG)</small></span></label>
+                    <label class="check-row"><input type="checkbox" id="earth_layer_temperature"><span>🌡 Temperature <small style="color:#667eea;">(MODIS)</small></span></label>
+                    <label class="check-row"><input type="checkbox" id="earth_layer_wind"><span>💨 Wind Speed <small style="color:#667eea;">(GFS)</small></span></label>
                 </div>
                 <div class="weather-options" style="padding-top:15px; border-top:1px solid rgba(255,255,255,0.1);">
                     <div class="weather-menu-header" style="margin-bottom:10px;">
-                        <h3 style="font-size:13px; color:#a0aec0;">Globe Quality</h3>
+                        <h3 style="font-size:12px; color:#a0aec0; text-transform:uppercase; letter-spacing:.06em;">Globe Quality</h3>
                     </div>
                     <label class="radio-row"><input type="radio" name="globe_quality" value="standard" checked><span>Standard (Fast)</span></label>
                     <label class="radio-row"><input type="radio" name="globe_quality" value="high"><span>8K Ultra (High Data)</span></label>
+                </div>
+                <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.07); font-size:10px; color:#4a5568; line-height:1.5;">
+                    Data: NASA GIBS · MODIS Terra
                 </div>
             </div>
         </div>

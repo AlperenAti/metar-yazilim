@@ -619,3 +619,10 @@ body:not(.earth-active) #earth-wrapper { display: none; }
 .earth-weather-controls { left: 20px; display: none; }
 body.earth-active .earth-weather-controls { display: flex; }
 body.earth-active .map-weather-controls { display: none !important; }
+
+.check-row { display:flex; align-items:center; gap:10px; cursor:pointer; padding:5px 2px; border-radius:6px; transition:.15s; }
+.check-row:hover { background:rgba(255,255,255,0.04); }
+.check-row input[type=checkbox] { accent-color:var(--brand); width:15px; height:15px; cursor:pointer; flex-shrink:0; }
+.check-row span { font-size:13px; color:var(--ink-muted); }
+.check-row input[type=checkbox]:checked + span { color:var(--brand); }
+.weather-menu-panel { min-width:260px; }

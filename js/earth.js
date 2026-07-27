@@ -2,15 +2,141 @@ window.EarthView = (function() {
     let globe = null;
     let initialized = false;
     let airportsData = [];
-    let cloudMesh = null;
+    let layerMeshes = {}; // id -> THREE.Mesh
 
+    // -------------------------------------------------------------------
+    // Layer Definitions — NASA GIBS equirectangular WMS
+    // -------------------------------------------------------------------
+    function getYesterday() {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        return d.toISOString().split('T')[0];
+    }
+
+    const GLOBE_LAYERS = {
+        clouds: {
+            getUrl: () => {
+                const date = getYesterday();
+                return `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&TIME=${date}&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=2048&HEIGHT=1024&FORMAT=image/jpeg`;
+            },
+            altFactor: 1.005,
+            opacity: 0.75,
+            blending: 'AdditiveBlending',
+            rotate: true
+        },
+        precipitation: {
+            getUrl: () => {
+                const date = getYesterday();
+                return `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=IMERG_Precipitation_Rate&TIME=${date}&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`;
+            },
+            altFactor: 1.007,
+            opacity: 0.85,
+            blending: 'AdditiveBlending',
+            rotate: false
+        },
+        temperature: {
+            getUrl: () => {
+                const date = getYesterday();
+                return `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=MODIS_Terra_Land_Surface_Temp_Day&TIME=${date}&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`;
+            },
+            altFactor: 1.003,
+            opacity: 0.65,
+            blending: 'AdditiveBlending',
+            rotate: false
+        },
+        wind: {
+            getUrl: () => {
+                const date = getYesterday();
+                return `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=GEOS-5_FPIT_Wind_Speed_10m&TIME=${date}&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`;
+            },
+            altFactor: 1.002,
+            opacity: 0.55,
+            blending: 'AdditiveBlending',
+            rotate: false
+        }
+    };
+
+    // -------------------------------------------------------------------
+    // Layer management
+    // -------------------------------------------------------------------
+    function addLayer(id) {
+        if (!globe || !window.THREE) return;
+        if (layerMeshes[id]) {
+            // Already loaded — just make sure it's in scene
+            if (!globe.scene().children.includes(layerMeshes[id])) {
+                globe.scene().add(layerMeshes[id]);
+            }
+            return;
+        }
+
+        const cfg = GLOBE_LAYERS[id];
+        if (!cfg) return;
+
+        const loader = new THREE.TextureLoader();
+        loader.crossOrigin = 'anonymous';
+
+        loader.load(cfg.getUrl(), (tex) => {
+            const globeRadius = globe.getGlobeRadius();
+            const mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(globeRadius * cfg.altFactor, 72, 72),
+                new THREE.MeshBasicMaterial({
+                    map: tex,
+                    transparent: true,
+                    opacity: cfg.opacity,
+                    blending: THREE[cfg.blending] || THREE.AdditiveBlending,
+                    depthWrite: false,
+                    side: THREE.FrontSide
+                })
+            );
+
+            layerMeshes[id] = mesh;
+
+            // Only add if checkbox is still checked
+            const cb = document.getElementById('earth_layer_' + id);
+            if (cb && cb.checked) {
+                globe.scene().add(mesh);
+            }
+
+            // Slow rotation for cloud layer
+            if (cfg.rotate) {
+                (function spin() {
+                    if (layerMeshes[id]) layerMeshes[id].rotation.y -= 0.00015;
+                    requestAnimationFrame(spin);
+                })();
+            }
+        }, undefined, (err) => {
+            console.warn(`[EarthView] Failed to load layer "${id}":`, err);
+        });
+    }
+
+    function removeLayer(id) {
+        if (layerMeshes[id] && globe) {
+            globe.scene().remove(layerMeshes[id]);
+        }
+    }
+
+    function syncAllLayers() {
+        if (!globe) return;
+        Object.keys(GLOBE_LAYERS).forEach(id => {
+            const cb = document.getElementById('earth_layer_' + id);
+            if (!cb) return;
+            if (cb.checked) {
+                addLayer(id);
+            } else {
+                removeLayer(id);
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------
+    // Init
+    // -------------------------------------------------------------------
     const init = async () => {
         if (initialized) return;
-        
+
         const container = document.getElementById('earth-container');
-        const loader = document.getElementById('earth-loading');
-        
-        // Initialize Globe
+        const loader    = document.getElementById('earth-loading');
+
         globe = Globe()(container)
             .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
             .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
@@ -22,105 +148,72 @@ window.EarthView = (function() {
             .pointColor(d => d.t === 1 ? '#00f0ff' : '#007acc')
             .pointResolution(32)
             .pointLabel(d => `
-                <div style="background: rgba(7, 17, 29, 0.9); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(0, 240, 255, 0.3); font-family: 'Inter', sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
-                    <div style="color: #fff; font-weight: 600; font-size: 14px; margin-bottom: 4px;">${d.i}</div>
-                    <div style="color: #a0aec0; font-size: 12px;">${d.n}</div>
+                <div style="background:rgba(7,17,29,0.92);padding:8px 12px;border-radius:8px;border:1px solid rgba(0,240,255,0.3);font-family:'Inter',sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.6);">
+                    <div style="color:#fff;font-weight:700;font-size:14px;margin-bottom:3px;">${d.i}</div>
+                    <div style="color:#a0aec0;font-size:12px;">${d.n}</div>
                 </div>
             `)
             .onPointClick(point => {
-                const mappedPoint = {
+                const ap = {
                     icao: point.i,
                     name: point.n,
-                    lat: point.lat,
-                    lon: point.lon,
+                    lat: parseFloat(point.lat),
+                    lon: parseFloat(point.lon),
                     runwayHeading: point.rh || 0,
                     elevation: point.e || 0
                 };
                 if (window.UI && window.UI.openAirport) {
                     document.getElementById('dashboard').classList.remove('collapsed');
-                    window.UI.openAirport(mappedPoint, false);
+                    window.UI.openAirport(ap, false);
                 }
             })
             .onGlobeReady(() => {
+                // Hide loader
                 loader.style.opacity = '0';
                 setTimeout(() => loader.style.display = 'none', 500);
-                
-                // Real-time Day/Night Cycle
+
+                // Real-time Day/Night lighting
                 if (window.THREE) {
                     const updateSunLight = () => {
-                        const d = new Date();
-                        const dayOfYear = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
-                        const declination = -23.44 * Math.cos((360 / 365) * (dayOfYear + 10) * (Math.PI / 180));
-                        const utcHours = d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600;
-                        const subsolarLng = 180 - (utcHours * 15);
-                        const subsolarLat = declination;
-                        
-                        const phi = (90 - subsolarLat) * (Math.PI / 180);
-                        const theta = (subsolarLng + 180) * (Math.PI / 180);
-                        const r = 1000;
-                        
-                        const x = -(r * Math.sin(phi) * Math.cos(theta));
-                        const z = (r * Math.sin(phi) * Math.sin(theta));
-                        const y = (r * Math.cos(phi));
-                        
-                        const dLight = globe.scene().children.find(obj => obj.type === 'DirectionalLight');
-                        if (dLight) {
-                            dLight.position.set(x, y, z);
-                            dLight.intensity = 1.2;
-                        }
-                        const aLight = globe.scene().children.find(obj => obj.type === 'AmbientLight');
-                        if (aLight) {
-                            aLight.intensity = 0.15; // Dark night side
-                        }
+                        const now = new Date();
+                        const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+                        const decl = -23.44 * Math.cos((2 * Math.PI / 365) * (dayOfYear + 10));
+                        const utcH = now.getUTCHours() + now.getUTCMinutes() / 60;
+                        const solarLng = 180 - utcH * 15;
+                        const phi   = (90 - decl) * (Math.PI / 180);
+                        const theta = (solarLng + 180) * (Math.PI / 180);
+                        const R = 1000;
+                        const x = -R * Math.sin(phi) * Math.cos(theta);
+                        const z =  R * Math.sin(phi) * Math.sin(theta);
+                        const y =  R * Math.cos(phi);
+
+                        const dLight = globe.scene().children.find(o => o.type === 'DirectionalLight');
+                        if (dLight) { dLight.position.set(x, y, z); dLight.intensity = 1.2; }
+                        const aLight = globe.scene().children.find(o => o.type === 'AmbientLight');
+                        if (aLight) { aLight.intensity = 0.15; }
                     };
                     updateSunLight();
-                    setInterval(updateSunLight, 60000); // Update every minute
+                    setInterval(updateSunLight, 60000);
                 }
+
+                // Activate any pre-checked layers
+                syncAllLayers();
             });
 
-        // Add Live Cloud Layer manually to the scene (official example way)
-        let cloudTextureLoaded = false;
-        if (window.THREE) {
-            new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/clouds.png', cloudsTexture => {
-                const globeRadius = globe.getGlobeRadius();
-                cloudMesh = new THREE.Mesh(
-                    new THREE.SphereGeometry(globeRadius * 1.004, 73, 73),
-                    new THREE.MeshPhongMaterial({ 
-                        map: cloudsTexture, 
-                        transparent: true, 
-                        opacity: 0.8
-                    })
-                );
-                cloudTextureLoaded = true;
-                
-                // Only add if clouds are currently selected in UI
-                const cloudRadio = document.querySelector('input[name="weather_layer"][value="clouds"]');
-                if (cloudRadio && cloudRadio.checked) {
-                    globe.scene().add(cloudMesh);
-                }
-                
-                (function rotateClouds() {
-                    if (cloudMesh) cloudMesh.rotation.y -= 0.0002;
-                    requestAnimationFrame(rotateClouds);
-                })();
-            });
-        }
-
-        // Auto-rotate disabled per user request
+        // Disable auto-rotate
         globe.controls().autoRotate = false;
-        globe.controls().autoRotateSpeed = 0.5;
 
-        // Fetch and filter airports
+        // Load airports
         try {
-            const response = await fetch('data/airports.json');
-            const data = await response.json();
+            const res  = await fetch('data/airports.json');
+            const data = await res.json();
             airportsData = data.filter(a => a.t === 1 || a.t === 2);
             globe.pointsData(airportsData);
         } catch (e) {
-            console.error("Failed to load airports for Earth view", e);
+            console.error('[EarthView] Failed to load airports:', e);
         }
 
-        // Handle window resize
+        // Resize handler
         window.addEventListener('resize', () => {
             if (document.body.classList.contains('earth-active') && globe) {
                 globe.width([container.clientWidth]);
@@ -128,65 +221,47 @@ window.EarthView = (function() {
             }
         });
 
-        // Wire up UI Quality Toggle
+        // Globe Quality toggle
         document.getElementsByName('globe_quality').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                loader.style.display = 'flex';
-                loader.style.opacity = '1';
-                if (e.target.value === 'high') {
-                    globe.globeImageUrl('assets/earth_8k.jpg');
-                } else {
-                    globe.globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');
-                }
+            radio.addEventListener('change', e => {
+                const l = document.getElementById('earth-loading');
+                if (l) { l.style.display = 'flex'; l.style.opacity = '1'; }
+                globe.globeImageUrl(
+                    e.target.value === 'high'
+                        ? 'assets/earth_8k.jpg'
+                        : 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg'
+                );
             });
         });
 
-        // Wire up Weather Layer Toggle (Clouds)
-        document.getElementsByName('earth_weather_layer').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                if (!cloudMesh || !globe) return;
-                if (e.target.value === 'clouds') {
-                    if (!globe.scene().children.includes(cloudMesh)) {
-                        globe.scene().add(cloudMesh);
-                    }
-                } else {
-                    if (globe.scene().children.includes(cloudMesh)) {
-                        globe.scene().remove(cloudMesh);
-                    }
-                }
+        // Weather layer checkboxes
+        Object.keys(GLOBE_LAYERS).forEach(id => {
+            const cb = document.getElementById('earth_layer_' + id);
+            if (!cb) return;
+            cb.addEventListener('change', () => {
+                if (cb.checked) addLayer(id);
+                else removeLayer(id);
             });
         });
 
         initialized = true;
     };
 
+    // -------------------------------------------------------------------
+    // Show / Hide
+    // -------------------------------------------------------------------
     const show = () => {
         document.body.classList.add('earth-active');
         document.getElementById('earth-wrapper').classList.remove('hidden');
         document.getElementById('map').style.visibility = 'hidden';
-        
+
         if (!initialized) {
             init();
-        } else {
-            if (globe) {
-                const container = document.getElementById('earth-container');
-                globe.width([container.clientWidth]);
-                globe.height([container.clientHeight]);
-                
-                // Sync cloud state when switching back to Earth
-                if (cloudMesh && globe) {
-                    const cloudRadio = document.querySelector('input[name="earth_weather_layer"][value="clouds"]');
-                    if (cloudRadio && cloudRadio.checked) {
-                        if (!globe.scene().children.includes(cloudMesh)) {
-                            globe.scene().add(cloudMesh);
-                        }
-                    } else {
-                        if (globe.scene().children.includes(cloudMesh)) {
-                            globe.scene().remove(cloudMesh);
-                        }
-                    }
-                }
-            }
+        } else if (globe) {
+            const container = document.getElementById('earth-container');
+            globe.width([container.clientWidth]);
+            globe.height([container.clientHeight]);
+            syncAllLayers();
         }
     };
 
