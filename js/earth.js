@@ -17,10 +17,10 @@ window.EarthView = (function() {
 
     const GLOBE_LAYERS = {
         clouds: {
-            getUrl: () => 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png',
+            getUrl: () => 'https://unpkg.com/three-globe/example/img/earth-clouds10.png',
             altFactor: 1.004,
-            opacity: 0.9,
-            blending: 'AdditiveBlending', // Additive blending hides black backgrounds (which this JPEG has)
+            opacity: 1.0,
+            blending: 'NormalBlending', 
             rotate: false
         }
     };
