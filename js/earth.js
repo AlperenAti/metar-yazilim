@@ -16,8 +16,8 @@ window.EarthView = (function() {
             .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
             .pointLat(d => parseFloat(d.lat))
             .pointLng(d => parseFloat(d.lon))
-            .pointAltitude(0.005)
-            .pointRadius(d => d.t === 1 ? 0.15 : 0.08)
+            .pointAltitude(0)
+            .pointRadius(d => d.t === 1 ? 0.04 : 0.02)
             .pointColor(d => d.t === 1 ? '#00f0ff' : '#007acc')
             .pointResolution(32)
             .pointLabel(d => `
