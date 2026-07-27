@@ -254,6 +254,21 @@
             timestampEl.textContent = `Clouds updated: ${zulu}`;
             timestampEl.classList.remove('hidden');
             
+        } else if (type === 'satellite') {
+            currentWeatherLayer = L.tileLayer.wms('https://mesonet.agron.iastate.edu/cgi-bin/wms/goes/global_ir.cgi', {
+                layers: 'global_ir',
+                format: 'image/png',
+                transparent: true,
+                opacity: 0.6,
+                attribution: '© IEM Satellite',
+                className: 'weather-satellite-layer'
+            }).addTo(map);
+            
+            const now = new Date();
+            const zulu = `${now.getUTCHours().toString().padStart(2, '0')}:${now.getUTCMinutes().toString().padStart(2, '0')} Z`;
+            timestampEl.textContent = `Satellite updated: ${zulu}`;
+            timestampEl.classList.remove('hidden');
+            
         } else if (type === 'radar') {
             try {
                 const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');

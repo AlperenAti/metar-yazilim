@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet-velocity@1.9.0/dist/leaflet-velocity.min.css">
+    <!-- Globe.gl -->
+    <script src="//unpkg.com/globe.gl"></script>
 </head>
 <body>
     <header class="app-header" aria-label="Main menu">
@@ -31,6 +33,7 @@
 
         <div class="view-toggle" role="group" aria-label="View switch">
             <button id="view-map-btn" class="view-btn active" type="button">Map</button>
+            <button id="view-earth-btn" class="view-btn" type="button">Earth</button>
             <button id="view-list-btn" class="view-btn" type="button">Dashboard</button>
         </div>
 
@@ -47,6 +50,14 @@
     <main>
         <div id="map" aria-label="Live airspace map">
             <div class="map-crosshair"></div>
+        </div>
+
+        <div id="earth-wrapper" class="hidden" aria-label="Interactive 3D Earth">
+            <div id="earth-loading" class="earth-loading-overlay">
+                <div class="earth-spinner"></div>
+                <p>Downloading Globe Textures...</p>
+            </div>
+            <div id="earth-container"></div>
         </div>
 
         <div class="weather-controls">
@@ -248,9 +259,39 @@
             </div>
             <!-- Populated state -->
             <div id="dashboard-content" class="dashboard-content hidden">
-                <div class="dash-header-bar">
+                <div class="dash-header-bar" style="display: flex; justify-content: space-between; align-items: center;">
                     <h2 class="dash-title">METAR <span id="dash-icao">LTFJ</span> · <span id="dash-name">Istanbul</span></h2>
-                    <div class="dash-time"><span id="dash-time-val">27 July 09:50 LT</span> <span class="dash-age">14m ago</span></div>
+                    <div class="dash-time">
+                        <span id="dash-time-val">27 July 09:50 LT</span> 
+                        <button id="unit-settings-btn" class="icon-btn" aria-label="Unit Settings" style="background:none; border:none; color:var(--brand); font-size:18px; cursor:pointer; margin-left:12px;">⚙️</button>
+                    </div>
+                </div>
+                
+                <div id="unit-settings-panel" class="unit-settings-panel hidden" style="background: var(--surface); padding: 16px; border-radius: 8px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.05); display: flex; gap: 16px; flex-wrap: wrap;">
+                    <div class="unit-group">
+                        <label style="display:block; font-size:12px; color:var(--brand); margin-bottom:4px;">Temperature</label>
+                        <select id="unit-temp" style="background:var(--surface-strong); color:var(--ink); border:1px solid rgba(255,255,255,0.1); padding:4px 8px; border-radius:4px;">
+                            <option value="C">Celsius (°C)</option>
+                            <option value="F">Fahrenheit (°F)</option>
+                            <option value="K">Kelvin (K)</option>
+                        </select>
+                    </div>
+                    <div class="unit-group">
+                        <label style="display:block; font-size:12px; color:var(--brand); margin-bottom:4px;">Wind Speed</label>
+                        <select id="unit-speed" style="background:var(--surface-strong); color:var(--ink); border:1px solid rgba(255,255,255,0.1); padding:4px 8px; border-radius:4px;">
+                            <option value="KT">Knots (kt)</option>
+                            <option value="MPH">Miles per hour (mph)</option>
+                            <option value="KMH">Kilometers per hour (km/h)</option>
+                            <option value="MS">Meters per second (m/s)</option>
+                        </select>
+                    </div>
+                    <div class="unit-group">
+                        <label style="display:block; font-size:12px; color:var(--brand); margin-bottom:4px;">Pressure</label>
+                        <select id="unit-pressure" style="background:var(--surface-strong); color:var(--ink); border:1px solid rgba(255,255,255,0.1); padding:4px 8px; border-radius:4px;">
+                            <option value="hPa">hPa</option>
+                            <option value="INHG">inHg</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <div class="dash-widgets-grid">
@@ -341,6 +382,7 @@
     <script src="js/wind-particles.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/runways.js"></script>
+    <script src="js/earth.js"></script>
     <script src="js/map.js"></script>
     <script src="js/app.js"></script>
 </body>

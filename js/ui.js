@@ -10,6 +10,7 @@
     
     // View Toggle
     const viewMapBtn = $('view-map-btn');
+    const viewEarthBtn = $('view-earth-btn');
     const viewListBtn = $('view-list-btn');
     const mapContainer = $('map');
     const fullDashboardView = $('full-dashboard-view');
@@ -25,6 +26,36 @@
     let airportTrafficRequestId = 0;
     let toastTimer = null;
     let dashboardChartInstances = {};
+
+    window.AppPrefs = {
+        tempUnit: window.localStorage.getItem('metar-temp-unit') || 'C',
+        speedUnit: window.localStorage.getItem('metar-speed-unit') || 'KT',
+        pressureUnit: window.localStorage.getItem('metar-pressure-unit') || 'hPa'
+    };
+
+    function convertTemp(celsius) {
+        if (celsius === null || celsius === undefined || isNaN(celsius)) return '-';
+        const unit = window.AppPrefs.tempUnit;
+        if (unit === 'F') return Math.round(celsius * 9/5 + 32) + ' °F';
+        if (unit === 'K') return Math.round(celsius + 273.15) + ' K';
+        return celsius + ' °C';
+    }
+
+    function convertSpeed(knots) {
+        if (knots === null || knots === undefined || isNaN(knots)) return '-';
+        const unit = window.AppPrefs.speedUnit;
+        if (unit === 'MPH') return Math.round(knots * 1.15078) + ' mph';
+        if (unit === 'KMH') return Math.round(knots * 1.852) + ' km/h';
+        if (unit === 'MS') return Math.round(knots * 0.514444) + ' m/s';
+        return knots + ' kt';
+    }
+
+    function convertPressure(hpa) {
+        if (hpa === null || hpa === undefined || isNaN(hpa)) return '-';
+        const unit = window.AppPrefs.pressureUnit;
+        if (unit === 'INHG') return (hpa * 0.02953).toFixed(2) + ' inHg';
+        return hpa + ' hPa';
+    }
 
     function renderChartError(message) {
         ['chart-temp', 'chart-wind', 'chart-qnh'].forEach(id => {
@@ -171,11 +202,11 @@
         $('ws-fltcat').textContent = metar.category;
         $('ws-fltcat').className = `flight-category ${metar.category.toLowerCase()}`;
         $('ws-summary').textContent = metar.weather;
-        $('ws-temp').textContent = metar.temperature ?? '—';
-        $('metar-wind').textContent = metar.wind;
+        $('ws-temp').textContent = convertTemp(metar.temperature);
+        $('metar-wind').textContent = metar.windSpeed !== null ? `${metar.windDirection}° at ${convertSpeed(metar.windSpeed)}` : metar.wind;
         $('metar-vis').textContent = metar.visibility;
-        $('metar-qnh').textContent = metar.altimeter === null ? '—' : `${metar.altimeter} hPa`;
-        $('metar-dewp').textContent = metar.dewpoint === null ? '—' : `${metar.dewpoint} °C`;
+        $('metar-qnh').textContent = convertPressure(metar.altimeter);
+        $('metar-dewp').textContent = convertTemp(metar.dewpoint);
         $('metar-raw').textContent = metar.raw || 'Raw METAR text not published.';
         $('metar-issued').textContent = formatObservationTime(metar.issued);
         $('taf-raw').textContent = taf || (tafUnavailable ? 'TAF source unreachable.' : 'No published TAF for this airport.');
@@ -213,6 +244,42 @@
         }
     }
 
+    function estimateTafCategory(content) {
+        let category = 'VFR';
+        
+        // Match visibility like 0800, 4000, 9999
+        const visMatch = content.match(/\b\d{4}\b/);
+        if (visMatch) {
+            const vis = parseInt(visMatch[0], 10);
+            if (vis < 800) category = 'LIFR';
+            else if (vis < 1500 && category !== 'LIFR') category = 'IFR';
+            else if (vis < 5000 && category !== 'LIFR' && category !== 'IFR') category = 'MVFR';
+        }
+        
+        // Match SM visibility (e.g. 1/2SM, 2SM)
+        const smMatch = content.match(/\b(\d+)?\s?(1\/2|1\/4|3\/4)?SM\b/);
+        if (smMatch) {
+            const whole = parseInt(smMatch[1]) || 0;
+            const fraction = smMatch[2] === '1/2' ? 0.5 : (smMatch[2] === '1/4' ? 0.25 : (smMatch[2] === '3/4' ? 0.75 : 0));
+            const totalSm = whole + fraction;
+            if (totalSm < 1) category = 'LIFR';
+            else if (totalSm < 3 && category !== 'LIFR') category = 'IFR';
+            else if (totalSm <= 5 && category !== 'LIFR' && category !== 'IFR') category = 'MVFR';
+        }
+        
+        // Match ceilings like BKN005, OVC012, VV002
+        const ceilMatch = content.match(/(?:BKN|OVC|VV)(\d{3})/g);
+        if (ceilMatch) {
+            for (const c of ceilMatch) {
+                const alt = parseInt(c.substring(3), 10);
+                if (alt < 5) category = 'LIFR';
+                else if (alt < 10 && category !== 'LIFR') category = 'IFR';
+                else if (alt <= 30 && category !== 'LIFR' && category !== 'IFR') category = 'MVFR';
+            }
+        }
+        return category;
+    }
+
     function renderTafParsed(tafText, tafUnavailable) {
         const container = $('taf-parsed');
         clearElement(container);
@@ -222,46 +289,47 @@
         const regex = /\b(FM\d{6}|BECMG|TEMPO|PROB30\s+TEMPO|PROB40\s+TEMPO|PROB30|PROB40)\b/;
         const parts = flatTaf.split(regex);
 
-        // Always show the full raw TAF string above the parsed entries
         $('taf-raw').textContent = tafText;
 
-        let entryCount = 1;
+        const ganttContainer = document.createElement('div');
+        ganttContainer.className = 'taf-gantt-container';
+
+        // Initial period is before the first block
+        let initialContent = parts[0].trim();
+        if (initialContent) {
+            // Strip the TAF header (e.g., TAF AMD LTFM 271040Z 2712/2818)
+            initialContent = initialContent.replace(/^TAF(?:\s+AMD|\s+COR)?\s+[A-Z0-9]{4}\s+\d{6}Z\s+\d{4}\/\d{4}\s*/, '');
+            const initialCat = estimateTafCategory(initialContent);
+            ganttContainer.innerHTML += `
+                <div class="taf-gantt-item category-${initialCat.toLowerCase()}">
+                    <div class="taf-gantt-time">Initial Base</div>
+                    <div class="taf-gantt-content">${initialContent}</div>
+                </div>
+            `;
+        }
+
         for (let i = 1; i < parts.length; i += 2) {
             const keyword = parts[i].trim();
             const content = parts[i + 1] ? parts[i + 1].trim() : '';
-            
-            const entryDiv = document.createElement('div');
-            entryDiv.className = 'taf-entry';
-            
-            const header = document.createElement('div');
-            header.className = 'taf-entry-header';
             
             let prettyKeyword = keyword;
             if (keyword.startsWith('FM')) {
                 const day = keyword.substring(2, 4);
                 const hour = keyword.substring(4, 6);
                 const min = keyword.substring(6, 8);
-                prettyKeyword = `FM (From Day ${day}, ${hour}:${min}Z)`;
-            } else if (keyword === 'BECMG') {
-                prettyKeyword = 'BECMG (Expected Change)';
-            } else if (keyword === 'TEMPO') {
-                prettyKeyword = 'TEMPO (Temporary Change)';
-            } else if (keyword.includes('PROB')) {
-                prettyKeyword = keyword + ' (Probability)';
+                prettyKeyword = `FM ${day}th ${hour}:${min}Z`;
             }
+
+            const cat = estimateTafCategory(content);
             
-            header.textContent = `Entry #${entryCount} · ${prettyKeyword}`;
-            
-            const body = document.createElement('div');
-            body.className = 'taf-entry-body';
-            body.textContent = `${keyword} ${content}`.trim();
-            
-            entryDiv.appendChild(header);
-            entryDiv.appendChild(body);
-            container.appendChild(entryDiv);
-            
-            entryCount++;
+            ganttContainer.innerHTML += `
+                <div class="taf-gantt-item category-${cat.toLowerCase()}">
+                    <div class="taf-gantt-time">${prettyKeyword}</div>
+                    <div class="taf-gantt-content">${content}</div>
+                </div>
+            `;
         }
+        container.appendChild(ganttContainer);
     }
 
     async function refreshAirportWeather() {
@@ -660,18 +728,28 @@
         const regex = /\b(FM\d{6}|BECMG|TEMPO|PROB30\s+TEMPO|PROB40\s+TEMPO|PROB30|PROB40)\b/;
         const parts = flatTaf.split(regex);
         
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+        container.style.gap = '8px';
+
         // Base forecast
-        const baseDiv = document.createElement('div');
-        baseDiv.className = 'dash-taf-entry';
-        baseDiv.innerHTML = `<div class="dash-taf-title">Initial Forecast</div><div class="dash-taf-body">${parts[0]}</div>`;
-        container.appendChild(baseDiv);
+        let initialContent = parts[0].trim();
+        if (initialContent) {
+            initialContent = initialContent.replace(/^TAF(?:\s+AMD|\s+COR)?\s+[A-Z0-9]{4}\s+\d{6}Z\s+\d{4}\/\d{4}\s*/, '');
+            const initialCat = estimateTafCategory(initialContent);
+            const baseDiv = document.createElement('div');
+            baseDiv.className = `dash-taf-entry category-${initialCat.toLowerCase()}`;
+            baseDiv.innerHTML = `<div class="dash-taf-title">Initial Forecast</div><div class="dash-taf-body">${initialContent}</div>`;
+            container.appendChild(baseDiv);
+        }
 
         for (let i = 1; i < parts.length; i += 2) {
             const keyword = parts[i].trim();
             const content = parts[i + 1] ? parts[i + 1].trim() : '';
             
             const entryDiv = document.createElement('div');
-            entryDiv.className = 'dash-taf-entry';
+            const cat = estimateTafCategory(content);
+            entryDiv.className = `dash-taf-entry category-${cat.toLowerCase()}`;
             
             let prettyKeyword = keyword;
             if (keyword.startsWith('FM')) {
@@ -687,7 +765,7 @@
                 prettyKeyword = 'Temporary';
                 entryDiv.classList.add('tempo');
             } else if (keyword.includes('PROB')) {
-                prettyKeyword = 'Probability ' + keyword.replace('PROB', '') + '%';
+                prettyKeyword = keyword + ' (Prob)';
             }
             
             entryDiv.innerHTML = `<div class="dash-taf-title">${prettyKeyword}</div><div class="dash-taf-body">${content}</div>`;
@@ -715,15 +793,15 @@
         catCard.className = `dash-widget-card category-${metar.category.toLowerCase()}`;
         $('dash-cat-val').textContent = metar.category;
         
-        $('dash-temp-val').textContent = metar.temperature !== null ? `${metar.temperature} °C` : '—';
+        $('dash-temp-val').textContent = convertTemp(metar.temperature);
         $('dash-weather-val').textContent = metar.weather || 'Clear';
         
-        $('dash-wind-spd').textContent = metar.windSpeed !== null ? `${metar.windSpeed} kt` : '—';
+        $('dash-wind-spd').textContent = convertSpeed(metar.windSpeed);
         $('dash-wind-dir').textContent = metar.windDirection !== null ? `${metar.windDirection}°` : 'Var';
         
         $('dash-vis-val').textContent = metar.visibility || '—';
         $('dash-ceil-val').textContent = metar.ceiling ? `${metar.ceiling} ft` : 'None';
-        $('dash-qnh-val').textContent = metar.altimeter !== null ? `${metar.altimeter} hPa` : '—';
+        $('dash-qnh-val').textContent = convertPressure(metar.altimeter);
         
         if (window.SunCalc) {
             const times = window.SunCalc.getTimes(new Date(), airport.lat, airport.lon);
@@ -867,9 +945,17 @@
 
     function switchView(view, forceEmpty = false) {
         if (!viewMapBtn || !viewListBtn) return;
+        
+        // Remove active class from all
+        viewMapBtn.classList.remove('active');
+        viewListBtn.classList.remove('active');
+        if (viewEarthBtn) viewEarthBtn.classList.remove('active');
+        
+        // Hide earth by default unless explicitly asked
+        if (window.EarthView) window.EarthView.hide();
+        
         if (view === 'map') {
             viewMapBtn.classList.add('active');
-            viewListBtn.classList.remove('active');
             fullDashboardView.classList.add('hidden');
             
             mapContainer.style.display = 'block';
@@ -880,7 +966,6 @@
             }
         } else if (view === 'list') {
             viewListBtn.classList.add('active');
-            viewMapBtn.classList.remove('active');
             fullDashboardView.classList.remove('hidden');
             
             mapContainer.style.display = 'none';
@@ -893,6 +978,14 @@
                 dashboardEmptyState.classList.remove('hidden');
                 dashboardContent.classList.add('hidden');
             }
+        } else if (view === 'earth') {
+            if (viewEarthBtn) viewEarthBtn.classList.add('active');
+            fullDashboardView.classList.add('hidden');
+            mapContainer.style.display = 'none';
+            dashboard.style.display = 'none';
+            airportPanel.classList.remove('open');
+            
+            if (window.EarthView) window.EarthView.show();
         }
     }
 
@@ -920,7 +1013,35 @@
         
         if (viewMapBtn && viewListBtn) {
             viewMapBtn.addEventListener('click', () => switchView('map'));
-            viewListBtn.addEventListener('click', () => switchView('list', true)); // Forces empty state
+            viewListBtn.addEventListener('click', () => switchView('list', true));
+            if (viewEarthBtn) viewEarthBtn.addEventListener('click', () => switchView('earth')); // Forces empty state
+        }
+        
+        // Unit Settings
+        const unitSettingsBtn = $('unit-settings-btn');
+        const unitSettingsPanel = $('unit-settings-panel');
+        if (unitSettingsBtn && unitSettingsPanel) {
+            unitSettingsBtn.addEventListener('click', () => {
+                unitSettingsPanel.classList.toggle('hidden');
+            });
+            
+            const initUnit = (id, prefKey, memoryKey) => {
+                const el = $(id);
+                if (el) {
+                    el.value = window.AppPrefs[memoryKey];
+                    el.addEventListener('change', (e) => {
+                        window.AppPrefs[memoryKey] = e.target.value;
+                        window.localStorage.setItem(prefKey, e.target.value);
+                        if (lastWeatherObj && selectedAirport) {
+                            populateDashboard(selectedAirport, lastWeatherObj);
+                            updateWeather(lastWeatherObj); // updates map popup
+                        }
+                    });
+                }
+            };
+            initUnit('unit-temp', 'metar-temp-unit', 'tempUnit');
+            initUnit('unit-speed', 'metar-speed-unit', 'speedUnit');
+            initUnit('unit-pressure', 'metar-pressure-unit', 'pressureUnit');
         }
         
         if (dashboardHeroSearchForm) {
