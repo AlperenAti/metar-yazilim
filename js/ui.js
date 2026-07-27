@@ -856,11 +856,11 @@
             if ($(id)) $(id).style.opacity = '1';
         });
 
-        // Destroy existing charts
-        ['temp', 'wind', 'qnh'].forEach(type => {
-            if (dashboardChartInstances[type]) {
-                dashboardChartInstances[type].destroy();
-                dashboardChartInstances[type] = null;
+        // Destroy existing charts safely
+        ['chart-temp', 'chart-wind', 'chart-qnh'].forEach(id => {
+            const existingChart = Chart.getChart(id);
+            if (existingChart) {
+                existingChart.destroy();
             }
         });
 
@@ -901,6 +901,7 @@
         };
 
         const ctxTemp = $('chart-temp').getContext('2d');
+        if (Chart.getChart('chart-temp')) Chart.getChart('chart-temp').destroy();
         dashboardChartInstances['temp'] = new Chart(ctxTemp, {
             type: 'line',
             data: {
@@ -914,6 +915,7 @@
         });
 
         const ctxWind = $('chart-wind').getContext('2d');
+        if (Chart.getChart('chart-wind')) Chart.getChart('chart-wind').destroy();
         dashboardChartInstances['wind'] = new Chart(ctxWind, {
             type: 'line',
             data: {
@@ -926,6 +928,7 @@
         });
 
         const ctxQnh = $('chart-qnh').getContext('2d');
+        if (Chart.getChart('chart-qnh')) Chart.getChart('chart-qnh').destroy();
         dashboardChartInstances['qnh'] = new Chart(ctxQnh, {
             type: 'line',
             data: {

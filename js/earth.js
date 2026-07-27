@@ -9,49 +9,37 @@ window.EarthView = (function() {
     // -------------------------------------------------------------------
     // Layer Definitions — NASA GIBS equirectangular WMS
     // -------------------------------------------------------------------
-    function getYesterday() {
+    function getRecentDate(daysAgo = 2) {
         const d = new Date();
-        d.setDate(d.getDate() - 1);
+        d.setDate(d.getDate() - daysAgo);
         return d.toISOString().split('T')[0];
     }
 
     const GLOBE_LAYERS = {
         clouds: {
-            getUrl: () => {
-                const date = getYesterday();
-                return `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&TIME=${date}&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=2048&HEIGHT=1024&FORMAT=image/jpeg`;
-            },
-            altFactor: 1.005,
-            opacity: 0.75,
-            blending: 'AdditiveBlending',
+            getUrl: () => 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png',
+            altFactor: 1.004,
+            opacity: 0.9,
+            blending: 'NormalBlending',
             rotate: true
         },
         precipitation: {
-            getUrl: () => {
-                const date = getYesterday();
-                return `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=IMERG_Precipitation_Rate&TIME=${date}&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`;
-            },
-            altFactor: 1.007,
+            getUrl: () => `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=IMERG_Precipitation_Rate&TIME=${getRecentDate(3)}&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`,
+            altFactor: 1.006,
             opacity: 0.85,
             blending: 'AdditiveBlending',
             rotate: false
         },
         temperature: {
-            getUrl: () => {
-                const date = getYesterday();
-                return `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=MODIS_Terra_Land_Surface_Temp_Day&TIME=${date}&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`;
-            },
-            altFactor: 1.003,
+            getUrl: () => `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=MODIS_Terra_Land_Surface_Temp_Day&TIME=${getRecentDate(3)}&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`,
+            altFactor: 1.002,
             opacity: 0.65,
             blending: 'AdditiveBlending',
             rotate: false
         },
         wind: {
-            getUrl: () => {
-                const date = getYesterday();
-                return `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=GEOS-5_FPIT_Wind_Speed_10m&TIME=${date}&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`;
-            },
-            altFactor: 1.002,
+            getUrl: () => `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=GEOS-5_FPIT_Wind_Speed_10m&TIME=${getRecentDate(3)}&CRS=CRS:84&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&FORMAT=image/png&TRANSPARENT=TRUE`,
+            altFactor: 1.003,
             opacity: 0.55,
             blending: 'AdditiveBlending',
             rotate: false
