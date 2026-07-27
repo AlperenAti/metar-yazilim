@@ -45,28 +45,29 @@ window.EarthView = (function() {
                 loader.style.opacity = '0';
                 setTimeout(() => loader.style.display = 'none', 500);
 
-                // Add Live Cloud Layer
+                // Add Live Cloud Layer using official customLayerData
                 if (window.THREE) {
-                    new THREE.TextureLoader().load('https://realearth.ssec.wisc.edu/api/image?products=globalir&width=2048&height=1024', cloudsTexture => {
-                        const globeRadius = globe.getGlobeRadius();
-                        const cloudsObj = new THREE.Mesh(
-                            new THREE.SphereGeometry(globeRadius * 1.004, 72, 72),
-                            new THREE.MeshBasicMaterial({ 
-                                map: cloudsTexture,
-                                transparent: true,
-                                opacity: 0.8,
-                                blending: THREE.AdditiveBlending,
-                                depthWrite: false
-                            })
-                        );
-                        
-                        globe.scene().add(cloudsObj);
-                        
-                        (function rotateClouds() {
-                            cloudsObj.rotation.y -= 0.0002; // Very slow rotation
-                            requestAnimationFrame(rotateClouds);
-                        })();
-                    });
+                    globe.customLayerData([{ type: 'clouds' }])
+                         .customThreeObject(d => {
+                             const globeRadius = globe.getGlobeRadius();
+                             const cloudsObj = new THREE.Mesh(
+                                 new THREE.SphereGeometry(globeRadius * 1.005, 72, 72),
+                                 new THREE.MeshBasicMaterial({ 
+                                     map: new THREE.TextureLoader().load('https://realearth.ssec.wisc.edu/api/image?products=globalir&width=2048&height=1024'),
+                                     transparent: true,
+                                     opacity: 0.6,
+                                     blending: THREE.AdditiveBlending,
+                                     depthWrite: false
+                                 })
+                             );
+                             
+                             (function rotateClouds() {
+                                 cloudsObj.rotation.y -= 0.0002; // Very slow rotation
+                                 requestAnimationFrame(rotateClouds);
+                             })();
+                             
+                             return cloudsObj;
+                         });
                 }
             });
 
