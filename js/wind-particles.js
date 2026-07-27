@@ -135,19 +135,89 @@
             const signal = this._abortController.signal;
             
             try {
-                // Fetch the cached global wind grid from our backend
-                const res = await fetch('https://metar-yazilim.onrender.com/api/wind', { signal });
-                if (!res.ok) {
-                    throw new Error("Backend Wind API error");
+                // We fetch directly from the client to avoid server IP bans.
+                // We construct a global grid.
+                const gridWidth = 20;
+                const gridHeight = 20;
+                const n = 80; 
+                const s = -80;
+                const w = -180;
+                const e = 180;
+                
+                const dy = (n - s) / (gridHeight - 1);
+                const dx = (e - w) / (gridWidth - 1);
+                
+                const points = [];
+                for (let y = 0; y < gridHeight; y++) {
+                    const lat = n - (y * dy);
+                    for (let x = 0; x < gridWidth; x++) {
+                        const lon = w + (x * dx);
+                        points.push({ lat, lon });
+                    }
                 }
                 
-                const velocityData = await res.json();
+                const chunkSize = 100;
+                const chunks = [];
+                for (let i = 0; i < points.length; i += chunkSize) {
+                    chunks.push(points.slice(i, i + chunkSize));
+                }
+                
+                const fetchPromises = chunks.map(chunk => {
+                    const lats = chunk.map(p => p.lat.toFixed(2)).join(',');
+                    const lons = chunk.map(p => p.lon.toFixed(2)).join(',');
+                    const url = `https://api.open-meteo.com/v1/gfs?latitude=${lats}&longitude=${lons}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`;
+                    return fetch(url, { signal }).then(res => {
+                        if (!res.ok) throw new Error("Open-Meteo Limit");
+                        return res.json();
+                    });
+                });
+                
+                const chunkResults = await Promise.all(fetchPromises);
+                
                 if (!this.active) return;
+                
+                const allResults = [];
+                chunkResults.forEach(data => {
+                    const arr = Array.isArray(data) ? data : [data];
+                    arr.forEach(r => allResults.push(r));
+                });
+                
+                const uData = [];
+                const vData = [];
+                
+                for (let i = 0; i < allResults.length; i++) {
+                    const point = allResults[i];
+                    if (point && point.current && typeof point.current.wind_direction_10m === 'number') {
+                        const speed = point.current.wind_speed_10m; 
+                        const dir = point.current.wind_direction_10m; 
+                        
+                        const rad = dir * Math.PI / 180;
+                        const u = -speed * Math.sin(rad);
+                        const v = -speed * Math.cos(rad);
+                        
+                        uData.push(Number(u.toFixed(2)));
+                        vData.push(Number(v.toFixed(2)));
+                    } else {
+                        uData.push(0);
+                        vData.push(0);
+                    }
+                }
+                
+                const velocityData = [
+                    {
+                        header: { parameterCategory: 2, parameterNumber: 2, dx, dy, la1: n, la2: s, lo1: w, lo2: e, nx: gridWidth, ny: gridHeight },
+                        data: uData
+                    },
+                    {
+                        header: { parameterCategory: 2, parameterNumber: 3, dx, dy, la1: n, la2: s, lo1: w, lo2: e, nx: gridWidth, ny: gridHeight },
+                        data: vData
+                    }
+                ];
                 
                 this._renderVelocity(velocityData);
             } catch (e) {
                 if (e.name !== 'AbortError') {
-                    console.warn("Wind Particles Error (Backend):", e);
+                    console.warn("Wind Particles Error (Client Fetch):", e);
                 }
             }
         },
