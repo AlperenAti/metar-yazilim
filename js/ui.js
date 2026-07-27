@@ -665,8 +665,20 @@
     }
     
     async function renderCharts(icao) {
-        if (!window.Chart) return; // Wait for CDN
+        if (!window.Chart) {
+            console.error('Chart.js not loaded yet.');
+            return;
+        }
         
+        // Show loading state
+        const chartContainers = ['chart-temp', 'chart-wind', 'chart-qnh'];
+        chartContainers.forEach(id => {
+            const ctx = $(id);
+            if (ctx && ctx.parentNode) {
+                // We could add a loading spinner here, but let's just rely on the API speed
+            }
+        });
+
         // Destroy existing charts
         ['temp', 'wind', 'qnh'].forEach(type => {
             if (dashboardChartInstances[type]) {
@@ -678,15 +690,16 @@
         const history = await window.API.fetchHistoricalMetar(icao);
         if (!history || history.length === 0) return;
         
-        // AviationWeather often returns oldest to newest or newest to oldest.
-        // Let's ensure chronological order (assuming index 0 is oldest, but check timestamps if they were parsed).
-        // For simplicity, we just use the array index as proxy for time.
-        // Since parseRawMetar currently doesn't parse the day/hour perfectly into a Date object, 
-        // we'll just reverse the array if the first element is the newest. Usually AviationWeather returns newest first.
-        // We will just reverse it.
         const chron = history.reverse();
         
-        const labels = chron.map((m, i) => i); // placeholder x-axis
+        // If we only got 1 point (e.g. server hasn't updated yet to support hours=24), ensure pointRadius > 0 so it's visible.
+        const pRadius = chron.length === 1 ? 4 : 2;
+        
+        const labels = chron.map((m, i) => {
+            if (!m.issued) return i;
+            const d = new Date(m.issued);
+            return isNaN(d.getTime()) ? i : d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }); 
         const temps = chron.map(m => m.temperature);
         const dews = chron.map(m => m.dewpoint);
         const winds = chron.map(m => m.windSpeed);
@@ -701,7 +714,7 @@
                 legend: { display: false }
             },
             scales: {
-                x: { display: false },
+                x: { display: true, ticks: { color: 'rgba(255,255,255,0.5)', maxTicksLimit: 6 } },
                 y: { display: true, position: 'right', grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'rgba(255,255,255,0.7)' } }
             }
         };
@@ -712,11 +725,11 @@
             data: {
                 labels,
                 datasets: [
-                    { label: 'Temperature (°C)', data: temps, borderColor: '#ff4d4d', tension: 0.3, pointRadius: 0 },
-                    { label: 'Dewpoint (°C)', data: dews, borderColor: '#4da6ff', tension: 0.3, pointRadius: 0 }
+                    { label: 'Temperature (°C)', data: temps, borderColor: '#ff4d4d', tension: 0.3, pointRadius: pRadius },
+                    { label: 'Dewpoint (°C)', data: dews, borderColor: '#4da6ff', tension: 0.3, pointRadius: pRadius }
                 ]
             },
-            options: { ...commonOptions, plugins: { title: { display: true, text: 'Temperature (°C)', color: '#fff' }, legend: { display: false } } }
+            options: { ...commonOptions, plugins: { title: { display: true, text: 'Temperature & Dewpoint (°C)', color: '#fff' }, legend: { display: false } } }
         });
 
         const ctxWind = $('chart-wind').getContext('2d');
@@ -725,7 +738,7 @@
             data: {
                 labels,
                 datasets: [
-                    { label: 'Wind Speed (kt)', data: winds, borderColor: '#4da6ff', tension: 0.3, pointRadius: 0, fill: true, backgroundColor: 'rgba(77, 166, 255, 0.1)' }
+                    { label: 'Wind Speed (kt)', data: winds, borderColor: '#4da6ff', tension: 0.3, pointRadius: pRadius, fill: true, backgroundColor: 'rgba(77, 166, 255, 0.1)' }
                 ]
             },
             options: { ...commonOptions, plugins: { title: { display: true, text: 'Wind speed (kt)', color: '#fff' } } }
@@ -737,7 +750,7 @@
             data: {
                 labels,
                 datasets: [
-                    { label: 'QNH (hPa)', data: qnhs, borderColor: '#fff', tension: 0.3, pointRadius: 0, stepped: true }
+                    { label: 'QNH (hPa)', data: qnhs, borderColor: '#fff', tension: 0.3, pointRadius: pRadius, stepped: true }
                 ]
             },
             options: { ...commonOptions, plugins: { title: { display: true, text: 'QNH (hPa)', color: '#fff' } } }

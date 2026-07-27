@@ -534,3 +534,4 @@ button { color: inherit; }
     font-family: 'DM Mono', monospace;
     font-size: 14px;
 }
+.hidden { display: none !important; }
