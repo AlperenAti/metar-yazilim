@@ -228,7 +228,13 @@
                         <div><span>DEW POINT</span><strong id="metar-dewp">—</strong></div>
                     </div>
                     <div class="weather-block"><div class="block-heading"><h3>METAR</h3><button id="copy-metar" class="copy-button" type="button">Copy</button></div><code id="metar-raw">Waiting for data…</code><p id="metar-issued" class="issued-time">—</p></div>
-                    <div class="weather-block taf-block"><div class="block-heading"><h3>TAF</h3><span>FORECAST</span></div><code id="taf-raw">Waiting for data…</code><div id="taf-parsed" class="taf-parsed"></div></div>
+                    <div class="weather-block forecast-table-block">
+                        <div class="block-heading"><h3>FORECAST</h3><span id="forecast-validity" style="font-size:11px;color:#718096;"></span></div>
+                        <div id="taf-forecast-container">
+                            <p class="empty-state">Select an airport to view the forecast.</p>
+                        </div>
+                    </div>
+                    <div class="weather-block taf-block"><div class="block-heading"><h3>TAF</h3><span>RAW</span></div><code id="taf-raw">Waiting for data…</code><div id="taf-parsed" class="taf-parsed"></div></div>
                     <div class="wind-visualizer"><div class="block-heading"><h3>WIND / RUNWAY</h3><span id="runway-label">—</span></div><canvas id="wind-canvas" width="260" height="260"></canvas><p>Diagram shows the reference runway heading; not the operationally active runway.</p>
                     </div>
                 </section>
@@ -409,6 +415,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
     <script src="js/api.js"></script>
+    <script src="js/taf-forecast.js"></script>
     <script src="js/visualizer.js"></script>
     <script src="js/sigmet.js"></script>
     <script src="js/notam.js"></script>

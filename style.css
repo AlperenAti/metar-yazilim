@@ -626,3 +626,114 @@ body.earth-active .map-weather-controls { display: none !important; }
 .check-row span { font-size:13px; color:var(--ink-muted); }
 .check-row input[type=checkbox]:checked + span { color:var(--brand); }
 .weather-menu-panel { min-width:260px; }
+
+/* ============================================================
+   TAF Forecast Hourly Table
+   ============================================================ */
+.forecast-table-block { padding: 0 0 4px 0; }
+.forecast-table-block .block-heading { padding: 0 20px 10px; }
+
+/* Scrollable outer wrapper */
+.tf-scroll-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 20px 8px; }
+.tf-scroll-outer::-webkit-scrollbar { height: 4px; }
+.tf-scroll-outer::-webkit-scrollbar-track { background: transparent; }
+.tf-scroll-outer::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 4px; }
+
+/* Table base */
+.tf-table { border-collapse: collapse; min-width: max-content; font-size: 12px; }
+
+/* Row label (frozen left col) */
+.tf-label {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--glass-bg, #0e1e30);
+    color: #718096;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: 7px 10px 7px 0;
+    white-space: nowrap;
+    min-width: 68px;
+    border-right: 1px solid rgba(255,255,255,.06);
+}
+
+/* Data cells */
+.tf-cell {
+    text-align: center;
+    padding: 6px 10px;
+    min-width: 58px;
+    border-right: 1px solid rgba(255,255,255,.04);
+    vertical-align: middle;
+    color: #e2e8f0;
+    font-size: 12px;
+    line-height: 1.4;
+}
+.tf-cell.tf-muted { color: #a0aec0; }
+.tf-now { background: rgba(102,126,234,.12); position: relative; }
+.tf-now::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: #667eea; }
+
+/* Row: Time */
+.tf-row-time .tf-cell { color: #a0aec0; font-size: 11px; padding-top: 10px; padding-bottom: 6px; }
+.tf-row-time .tf-cell strong { color: #e2e8f0; font-size: 13px; display: block; }
+
+/* Row: Flight cat badge */
+.tf-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    color: #fff;
+}
+
+/* Row: Weather */
+.tf-row-wx .tf-cell { padding-top: 8px; padding-bottom: 8px; }
+.tf-wx-icon { font-size: 22px; line-height: 1; margin-bottom: 3px; }
+.tf-wx-lbl { font-size: 10px; color: #a0aec0; }
+
+/* Row: Sun */
+.tf-row-sun .tf-cell { font-size: 10px; }
+.tf-sun-rise { color: #fbbf24; }
+.tf-sun-set  { color: #f97316; }
+
+/* Alternating row shade */
+.tf-table tr:nth-child(even) .tf-cell { background: rgba(255,255,255,.018); }
+.tf-table tr:nth-child(even) .tf-now  { background: rgba(102,126,234,.14); }
+
+/* ============================================================
+   Forecast explanation block
+   ============================================================ */
+.tf-explanation {
+    padding: 16px 20px 8px;
+    border-top: 1px solid rgba(255,255,255,.07);
+    margin-top: 4px;
+}
+.tf-explanation h4 {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: #718096;
+    margin: 0 0 12px;
+}
+.tf-exp-group { margin-bottom: 12px; }
+.tf-exp-heading {
+    font-size: 12px;
+    font-weight: 600;
+    color: #90cdf4;
+    margin-bottom: 5px;
+}
+.tf-exp-bullets {
+    margin: 0;
+    padding-left: 18px;
+    list-style: disc;
+}
+.tf-exp-bullets li {
+    font-size: 12px;
+    color: #a0aec0;
+    line-height: 1.6;
+    margin-bottom: 2px;
+}

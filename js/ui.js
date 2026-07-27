@@ -176,8 +176,12 @@
         $('metar-dewp').textContent = '—';
         $('metar-raw').textContent = 'Waiting for data…';
         $('metar-issued').textContent = '—';
-        $('taf-raw').textContent = 'Waiting for data…';
+        $('taf-raw').textContent = 'Waiting for data ';
         clearElement($('taf-parsed'));
+        const fc = $('taf-forecast-container');
+        if (fc) fc.innerHTML = '<p class="empty-state">Loading forecast…</p>';
+        const fv = $('forecast-validity');
+        if (fv) fv.textContent = '';
         metarText = '';
         window.Visualizer.clear();
     }
@@ -212,7 +216,12 @@
         $('taf-raw').textContent = taf || (tafUnavailable ? 'TAF source unreachable.' : 'No published TAF for this airport.');
         
         renderTafParsed(taf, tafUnavailable);
-        
+
+        // Render hourly forecast table
+        const fc = $('taf-forecast-container');
+        if (fc && window.TAFForecast) {
+            window.TAFForecast.render(fc, taf, selectedAirport);
+        }
         window.Visualizer.drawRunwayAndWind(selectedAirport.runwayHeading, metar.windDirection, metar.windSpeed);
         
         if (window.AtisGenerator) {
