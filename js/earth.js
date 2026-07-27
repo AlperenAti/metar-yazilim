@@ -11,13 +11,13 @@ window.EarthView = (function() {
         
         // Initialize Globe
         globe = Globe()(container)
-            .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
+            .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
             .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
             .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
             .pointLat(d => parseFloat(d.lat))
             .pointLng(d => parseFloat(d.lon))
-            .pointAltitude(0.001)
-            .pointRadius(d => d.t === 1 ? 0.05 : 0.03)
+            .pointAltitude(0.005)
+            .pointRadius(d => d.t === 1 ? 0.15 : 0.08)
             .pointColor(d => d.t === 1 ? '#00f0ff' : '#007acc')
             .pointResolution(32)
             .pointLabel(d => `
