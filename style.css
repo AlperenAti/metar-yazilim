@@ -535,3 +535,42 @@ button { color: inherit; }
     font-size: 14px;
 }
 .hidden { display: none !important; }
+
+.autocomplete-list {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #0a1828;
+    border: 1px solid rgba(154, 191, 220, 0.18);
+    border-radius: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 3000;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    text-align: left;
+}
+.autocomplete-list li {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    color: #eaf4ff;
+    transition: background 0.1s;
+}
+.autocomplete-list li:last-child {
+    border-bottom: none;
+}
+.autocomplete-list li:hover {
+    background: rgba(77, 166, 255, 0.15);
+}
+.autocomplete-list li strong {
+    color: #4da6ff;
+    font-weight: 700;
+}
+.autocomplete-list.hidden {
+    display: none;
+}

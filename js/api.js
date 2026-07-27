@@ -221,5 +221,5 @@
         return Array.isArray(data.ac) ? data.ac.map(normalizeAircraft).filter(Boolean) : [];
     }
 
-    window.API = { fetchAirportWeather, fetchAircraftNear, fetchBulkMetar };
+    window.API = { fetchAirportWeather, fetchAircraftNear, fetchBulkMetar, fetchHistoricalMetar };
 }());

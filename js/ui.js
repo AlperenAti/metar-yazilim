@@ -465,13 +465,60 @@
         }
     }
 
-    function populateAirportOptions() {
-        const optionList = $('airport-options');
-        window.MapManager.airports.forEach(airport => {
-            const option = document.createElement('option');
-            option.value = airport.icao;
-            option.label = airport.name;
-            optionList.appendChild(option);
+    function setupAutocomplete(inputElement) {
+        if (!inputElement) return;
+        const formElement = inputElement.closest('form');
+        if (!formElement) return;
+        
+        formElement.style.position = 'relative';
+        const list = document.createElement('ul');
+        list.className = 'autocomplete-list hidden';
+        formElement.appendChild(list);
+        
+        let blurTimeout;
+
+        inputElement.addEventListener('input', () => {
+            const val = inputElement.value.trim().toLowerCase();
+            list.innerHTML = '';
+            if (!val || val.length < 2) {
+                list.classList.add('hidden');
+                return;
+            }
+            
+            // Match ICAO or Name
+            const matches = window.MapManager.airports.filter(a => 
+                a.icao.toLowerCase().includes(val) || 
+                (a.name && a.name.toLowerCase().includes(val))
+            ).slice(0, 10);
+            
+            if (matches.length > 0) {
+                matches.forEach(m => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${m.icao}</strong> - ${m.name}`;
+                    li.addEventListener('mousedown', (e) => {
+                        e.preventDefault(); 
+                        inputElement.value = m.icao;
+                        list.classList.add('hidden');
+                        formElement.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                    });
+                    list.appendChild(li);
+                });
+                list.classList.remove('hidden');
+            } else {
+                list.classList.add('hidden');
+            }
+        });
+        
+        inputElement.addEventListener('focus', () => {
+            if (inputElement.value.trim().length >= 2) {
+                inputElement.dispatchEvent(new Event('input'));
+            }
+        });
+
+        inputElement.addEventListener('blur', () => {
+            blurTimeout = setTimeout(() => {
+                list.classList.add('hidden');
+            }, 150);
         });
     }
 
@@ -788,7 +835,7 @@
         }
     }
 
-    function switchView(view) {
+    function switchView(view, forceEmpty = false) {
         if (!viewMapBtn || !viewListBtn) return;
         if (view === 'map') {
             viewMapBtn.classList.add('active');
@@ -810,7 +857,7 @@
             dashboard.style.display = 'none';
             airportPanel.classList.remove('open');
             
-            if (selectedAirport) {
+            if (selectedAirport && !forceEmpty) {
                 renderFullDashboard(selectedAirport);
             } else {
                 dashboardEmptyState.classList.remove('hidden');
@@ -820,7 +867,8 @@
     }
 
     function initialize() {
-        populateAirportOptions();
+        setupAutocomplete($('search-input'));
+        setupAutocomplete($('dashboard-hero-search-input'));
         const savedTheme = window.localStorage.getItem('metar-theme');
         if (savedTheme === 'light') {
             document.body.classList.add('light-mode');
@@ -842,7 +890,7 @@
         
         if (viewMapBtn && viewListBtn) {
             viewMapBtn.addEventListener('click', () => switchView('map'));
-            viewListBtn.addEventListener('click', () => switchView('list'));
+            viewListBtn.addEventListener('click', () => switchView('list', true)); // Forces empty state
         }
         
         if (dashboardHeroSearchForm) {
@@ -882,7 +930,7 @@
 
         const openDashboardBtn = $('open-dashboard-btn');
         if (openDashboardBtn) {
-            openDashboardBtn.addEventListener('click', () => switchView('list'));
+            openDashboardBtn.addEventListener('click', () => switchView('list', false));
         }
 
         $('close-airport-btn').addEventListener('click', closeAirport);
