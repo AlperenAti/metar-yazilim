@@ -144,8 +144,8 @@
                 const w = bounds.getWest() - 1;
                 const e = bounds.getEast() + 1;
 
-                const gridWidth = 15;
-                const gridHeight = 15;
+                const gridWidth = 10;
+                const gridHeight = 10;
                 
                 const dy = (n - s) / (gridHeight - 1);
                 const dx = (e - w) / (gridWidth - 1);
