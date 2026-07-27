@@ -30,6 +30,11 @@
             <kbd>↵</kbd>
         </form>
 
+        <div class="view-toggle" role="group" aria-label="View switch">
+            <button id="view-map-btn" class="view-btn active" type="button">Map</button>
+            <button id="view-list-btn" class="view-btn" type="button">Dashboard</button>
+        </div>
+
         <div class="header-actions">
             <button id="refresh-map-btn" class="icon-button" type="button" aria-label="Refresh live airspace" title="Refresh live airspace">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"></path></svg>
@@ -128,7 +133,10 @@
         <aside id="airport-panel" class="airport-panel" aria-hidden="true" aria-label="Airport details">
             <div class="airport-panel-header">
                 <div><span id="airport-region" class="eyebrow">TURKEY</span><h2 id="apt-icao">ICAO</h2><p id="apt-name">Airport</p></div>
-                <button id="close-airport-btn" class="close-button" type="button" aria-label="Close airport panel">×</button>
+                <div class="header-actions-right" style="display: flex; gap: 8px; align-items: flex-start;">
+                    <button id="open-dashboard-btn" class="btn-primary" type="button" style="padding: 6px 12px; font-size: 12px;">See Full METAR & TAF</button>
+                    <button id="close-airport-btn" class="close-button" type="button" aria-label="Close airport panel">×</button>
+                </div>
             </div>
 
             <nav class="panel-tabs" aria-label="Airport sections">
@@ -226,11 +234,105 @@
         </aside>
 
 
+        <div id="full-dashboard-view" class="full-dashboard-view hidden">
+            <!-- Empty state -->
+            <div id="dashboard-empty-state" class="dashboard-empty-state">
+                <div class="dashboard-search-hero">
+                    <h2>Airport Weather Dashboard</h2>
+                    <p>Enter an ICAO code or airport name to view detailed aviation weather, forecasts, and runway information.</p>
+                    <form id="dashboard-hero-search-form" class="hero-search-box">
+                        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"></circle><path d="m20 20-4.2-4.2"></path></svg>
+                        <input id="dashboard-hero-search-input" list="airport-options" autocomplete="off" placeholder="Search ICAO or airport" required>
+                        <button type="submit" class="btn-primary">Search</button>
+                    </form>
+                </div>
+            </div>
+            <!-- Populated state -->
+            <div id="dashboard-content" class="dashboard-content hidden">
+                <div class="dash-header-bar">
+                    <h2 class="dash-title">METAR <span id="dash-icao">LTFJ</span> · <span id="dash-name">Istanbul</span></h2>
+                    <div class="dash-time"><span id="dash-time-val">27 July 09:50 LT</span> <span class="dash-age">14m ago</span></div>
+                </div>
+                
+                <div class="dash-widgets-grid">
+                    <div id="dash-cat-card" class="dash-widget-card category-vfr">
+                        <div id="dash-cat-val" class="widget-val">VFR</div>
+                        <div id="dash-cat-desc" class="widget-label">No warnings</div>
+                    </div>
+                    <div class="dash-widget-card">
+                        <div class="widget-icon">☀️</div>
+                        <div id="dash-temp-val" class="widget-val">27 °C</div>
+                        <div id="dash-weather-val" class="widget-label">Clear</div>
+                    </div>
+                    <div class="dash-widget-card category-vfr">
+                        <div id="dash-wind-spd" class="widget-val">7 kt</div>
+                        <div id="dash-wind-dir" class="widget-label">190° (170 - 230°)</div>
+                    </div>
+                    <div class="dash-widget-card">
+                        <div id="dash-vis-val" class="widget-val">10 km+</div>
+                        <div class="widget-label">Visibility</div>
+                    </div>
+                    <div class="dash-widget-card">
+                        <div id="dash-ceil-val" class="widget-val">None</div>
+                        <div class="widget-label">Ceiling</div>
+                    </div>
+                    <div class="dash-widget-card">
+                        <div id="dash-qnh-val" class="widget-val">1014 hPa</div>
+                        <div id="dash-sun-val" class="widget-label">🌙 20:24 (10:20h)</div>
+                    </div>
+                </div>
+
+                <div class="dash-main-grid">
+                    <div class="dash-wind-panel">
+                        <canvas id="dash-wind-canvas" width="400" height="400"></canvas>
+                        
+                        <div class="dash-section mt-4">
+                            <h3>Runways</h3>
+                            <table class="dash-rwy-table" id="dash-rwy-table">
+                                <thead>
+                                    <tr>
+                                        <th>Id</th>
+                                        <th>Heading</th>
+                                        <th>Crosswind</th>
+                                        <th>Headwind</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="dash-raw-metar">
+                            <p id="dash-nl-metar" style="color: #fff; font-family: Inter, sans-serif; margin-bottom: 12px; font-size: 14px; line-height: 1.5;"></p>
+                            <code id="dash-raw-text">Loading...</code>
+                        </div>
+                    </div>
+                    <div class="dash-charts-panel">
+                        <!-- Charts will go here -->
+                        <div class="dash-chart-container"><canvas id="chart-temp"></canvas></div>
+                        <div class="dash-chart-container"><canvas id="chart-wind"></canvas></div>
+                        <div class="dash-chart-container"><canvas id="chart-qnh"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="dash-section mt-4">
+                    <h3>Terminal Aerodrome Forecast (TAF)</h3>
+                    <div id="dash-taf-container" class="dash-taf-list">
+                        <!-- Populated by JS -->
+                    </div>
+                    <code id="dash-raw-taf-text" style="display:block; margin-top:16px; color:#99c2ff; font-family:'DM Mono', monospace;"></code>
+                </div>
+            </div>
+        </div>
+
         <div id="toast" class="toast" role="status" aria-live="polite"></div>
     </main>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://unpkg.com/leaflet-velocity@1.9.0/dist/leaflet-velocity.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
     <script src="js/api.js"></script>
     <script src="js/visualizer.js"></script>
     <script src="js/sigmet.js"></script>

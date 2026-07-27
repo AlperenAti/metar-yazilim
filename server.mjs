@@ -185,8 +185,13 @@ async function handleWeather(requestUrl, response) {
             return;
         }
         upstreamUrl += `?ids=${encodeURIComponent(icao)}`;
+        
+        const hours = requestUrl.searchParams.get('hours');
+        if (hours) {
+            upstreamUrl += `&hours=${encodeURIComponent(hours)}`;
+        }
     }
-    const cacheKey = resource === 'isigmet' ? 'isigmet' : `${resource}:${requestUrl.searchParams.get('ids')?.trim().toUpperCase()}`;
+    const cacheKey = resource === 'isigmet' ? 'isigmet' : `${resource}:${requestUrl.searchParams.get('ids')?.trim().toUpperCase()}:${requestUrl.searchParams.get('hours') || '1'}`;
     const cached = weatherCache.get(cacheKey);
     if (cached && Date.now() - cached.at < WEATHER_CACHE_MS) {
         const contentType = resource === 'isigmet' ? 'application/json; charset=utf-8' : 'text/plain; charset=utf-8';

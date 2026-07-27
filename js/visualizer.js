@@ -1,19 +1,10 @@
 (function () {
-    const canvas = document.getElementById('wind-canvas');
-    const ctx = canvas.getContext('2d');
-    const size = canvas.width;
-    const center = size / 2;
-
-    function clear() {
-        ctx.clearRect(0, 0, size, size);
-    }
-
-    function drawCompass() {
+    function drawCompass(ctx, center, size) {
         ctx.save();
         ctx.strokeStyle = 'rgba(129, 158, 183, .3)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(center, center, 101, 0, Math.PI * 2);
+        ctx.arc(center, center, center - 24, 0, Math.PI * 2);
         ctx.stroke();
         ctx.setLineDash([3, 6]);
         ctx.beginPath();
@@ -32,7 +23,7 @@
         ctx.restore();
     }
 
-    function drawRunway(heading) {
+    function drawRunway(ctx, center, heading) {
         ctx.save();
         ctx.translate(center, center);
         ctx.rotate((heading * Math.PI) / 180);
@@ -40,14 +31,12 @@
         const rwWidth = 36;
         const rwHeight = 180;
 
-        // Pavement
         ctx.fillStyle = '#3a4454';
         ctx.fillRect(-rwWidth / 2, -rwHeight / 2, rwWidth, rwHeight);
         ctx.strokeStyle = '#2b3441';
         ctx.lineWidth = 2;
         ctx.strokeRect(-rwWidth / 2, -rwHeight / 2, rwWidth, rwHeight);
 
-        // Centerline
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 1.5;
         ctx.setLineDash([12, 14]);
@@ -64,7 +53,6 @@
             ctx.translate(0, yOffset);
             if (isTop) ctx.rotate(Math.PI);
             
-            // Threshold "piano keys"
             const keyWidth = 2.5;
             const keyHeight = 12;
             const keySpacing = 4.5;
@@ -74,34 +62,27 @@
                 ctx.fillRect(-4 - keyWidth - i * keySpacing, -keyHeight - 2, keyWidth, keyHeight);
             }
             
-            // Touchdown zone blocks (Aiming point)
             ctx.fillRect(6, -keyHeight - 52, 6, 22);
             ctx.fillRect(-12, -keyHeight - 52, 6, 22);
 
-            // Runway Designation Number
             ctx.font = '900 16px "Arial", sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.save();
-            ctx.scale(1, 1.5); // Vertical stretch for perspective
+            ctx.scale(1, 1.5);
             ctx.fillText(num, 0, (-keyHeight - 24) / 1.5);
             ctx.restore();
-
             ctx.restore();
         }
 
-        // Primary approach end (Bottom of the rectangle for the current heading)
         const numPrimary = String(Math.round(heading / 10) || 36).padStart(2, '0');
         drawEnd(rwHeight / 2, numPrimary, false);
-        
-        // Secondary approach end (Top of the rectangle)
         const numSecondary = String(Math.round(((heading + 180) % 360) / 10) || 36).padStart(2, '0');
         drawEnd(-rwHeight / 2, numSecondary, true);
-        
         ctx.restore();
     }
 
-    function drawWind(windDirection, windSpeed) {
+    function drawWind(ctx, center, windDirection, windSpeed) {
         if (!Number.isFinite(windDirection)) return;
         const radians = (windDirection * Math.PI) / 180;
         ctx.save();
@@ -111,12 +92,12 @@
         ctx.fillStyle = '#44ddbd';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(0, -109); ctx.lineTo(0, -25);
+        ctx.moveTo(0, -center + 21); ctx.lineTo(0, -25);
         ctx.stroke();
         ctx.beginPath();
         ctx.moveTo(0, -18); ctx.lineTo(-7, -32); ctx.lineTo(7, -32); ctx.closePath();
         ctx.fill();
-        ctx.translate(0, -124);
+        ctx.translate(0, -center + 6);
         ctx.rotate(-radians);
         ctx.font = '500 11px "DM Mono"';
         ctx.textAlign = 'center';
@@ -124,11 +105,35 @@
         ctx.restore();
     }
 
-    function drawRunwayAndWind(runwayHeading, windDirection, windSpeed) {
-        clear();
-        drawCompass();
-        if (Number.isFinite(runwayHeading)) drawRunway(runwayHeading);
-        drawWind(windDirection, windSpeed);
+    function drawRunwayAndWind(runwayHeading, windDirection, windSpeed, canvasId = 'wind-canvas') {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        
+        // Reset scale if needed for high DPI
+        const dpr = window.devicePixelRatio || 1;
+        const size = canvas.width / (canvasId === 'dash-wind-canvas' ? dpr : 1); 
+        // Note: the original 'wind-canvas' doesn't use dpr scaling in its width directly, it's fixed.
+        // We handle that in the caller for dash. Let's just use CSS size.
+        const rect = canvas.getBoundingClientRect();
+        const displaySize = Math.max(rect.width, size);
+        
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Normalizing size for drawing logic
+        const drawSize = canvasId === 'dash-wind-canvas' ? canvas.width / dpr : canvas.width;
+        const center = drawSize / 2;
+
+        drawCompass(ctx, center, drawSize);
+        if (Number.isFinite(runwayHeading)) drawRunway(ctx, center, runwayHeading);
+        drawWind(ctx, center, windDirection, windSpeed);
+    }
+    
+    function clear(canvasId = 'wind-canvas') {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
     window.Visualizer = { clear, drawRunwayAndWind };

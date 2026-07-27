@@ -8,6 +8,7 @@
  */
 (function () {
     const WEATHER_API = 'https://metar-yazilim.onrender.com/api/weather/metar?ids=';
+    const HISTORICAL_WEATHER_API = 'https://metar-yazilim.onrender.com/api/weather/metar?hours=24&ids=';
     const TAF_API = 'https://metar-yazilim.onrender.com/api/weather/taf?ids=';
     const AIRCRAFT_API = 'https://api.airplanes.live/v2';
 
@@ -71,7 +72,6 @@
 
     async function fetchBulkMetar(icaoList) {
         if (!icaoList || icaoList.length === 0) return [];
-        // Max ~50-100 per request is usually fine.
         const ids = icaoList.join(',');
         try {
             const response = await fetchWithTimeout(`${WEATHER_API}${ids}`);
@@ -82,6 +82,22 @@
             return lines.map(line => parseRawMetar(line)).filter(Boolean);
         } catch (error) {
             console.error('Failed to fetch bulk METAR:', error);
+            return [];
+        }
+    }
+
+    async function fetchHistoricalMetar(icao) {
+        const id = encodeURIComponent(icao.trim().toUpperCase());
+        try {
+            const response = await fetchWithTimeout(`${HISTORICAL_WEATHER_API}${id}`);
+            const text = await response.text();
+            if (!text) return [];
+            
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 10);
+            // AviationWeather returns oldest to newest usually, or newest to oldest. We'll parse them.
+            return lines.map(line => parseRawMetar(line)).filter(Boolean);
+        } catch (error) {
+            console.error('Failed to fetch historical METAR:', error);
             return [];
         }
     }
