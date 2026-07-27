@@ -178,8 +178,6 @@
         $('metar-issued').textContent = '—';
         $('taf-raw').textContent = 'Waiting for data ';
         clearElement($('taf-parsed'));
-        const fc = $('taf-forecast-container');
-        if (fc) fc.innerHTML = '<p class="empty-state">Loading forecast…</p>';
         const fv = $('forecast-validity');
         if (fv) fv.textContent = '';
         metarText = '';
@@ -216,12 +214,6 @@
         $('taf-raw').textContent = taf || (tafUnavailable ? 'TAF source unreachable.' : 'No published TAF for this airport.');
         
         renderTafParsed(taf, tafUnavailable);
-
-        // Render hourly forecast table
-        const fc = $('taf-forecast-container');
-        if (fc && window.TAFForecast) {
-            window.TAFForecast.render(fc, taf, selectedAirport);
-        }
         window.Visualizer.drawRunwayAndWind(selectedAirport.runwayHeading, metar.windDirection, metar.windSpeed);
         
         if (window.AtisGenerator) {
@@ -724,61 +716,20 @@
     function populateDashTaf(tafText, tafUnavailable) {
         const container = $('dash-taf-container');
         if (!container) return;
-        clearElement(container);
         
         $('dash-raw-taf-text').textContent = tafText || '';
         
         if (!tafText || tafUnavailable) {
             container.innerHTML = '<p class="empty-state">No TAF available.</p>';
+            const fv = $('forecast-validity');
+            if (fv) fv.textContent = '';
             return;
         }
 
-        const flatTaf = tafText.replace(/\s+/g, ' ');
-        const regex = /\b(FM\d{6}|BECMG|TEMPO|PROB30\s+TEMPO|PROB40\s+TEMPO|PROB30|PROB40)\b/;
-        const parts = flatTaf.split(regex);
-        
-        container.style.display = 'flex';
-        container.style.flexDirection = 'column';
-        container.style.gap = '8px';
-
-        // Base forecast
-        let initialContent = parts[0].trim();
-        if (initialContent) {
-            initialContent = initialContent.replace(/^TAF(?:\s+AMD|\s+COR)?\s+[A-Z0-9]{4}\s+\d{6}Z\s+\d{4}\/\d{4}\s*/, '');
-            const initialCat = estimateTafCategory(initialContent);
-            const baseDiv = document.createElement('div');
-            baseDiv.className = `dash-taf-entry category-${initialCat.toLowerCase()}`;
-            baseDiv.innerHTML = `<div class="dash-taf-title">Initial Forecast</div><div class="dash-taf-body">${initialContent}</div>`;
-            container.appendChild(baseDiv);
-        }
-
-        for (let i = 1; i < parts.length; i += 2) {
-            const keyword = parts[i].trim();
-            const content = parts[i + 1] ? parts[i + 1].trim() : '';
-            
-            const entryDiv = document.createElement('div');
-            const cat = estimateTafCategory(content);
-            entryDiv.className = `dash-taf-entry category-${cat.toLowerCase()}`;
-            
-            let prettyKeyword = keyword;
-            if (keyword.startsWith('FM')) {
-                const day = keyword.substring(2, 4);
-                const hour = keyword.substring(4, 6);
-                const min = keyword.substring(6, 8);
-                prettyKeyword = `From Day ${day}, ${hour}:${min}Z`;
-                entryDiv.classList.add('fm');
-            } else if (keyword === 'BECMG') {
-                prettyKeyword = 'Becoming';
-                entryDiv.classList.add('becmg');
-            } else if (keyword === 'TEMPO') {
-                prettyKeyword = 'Temporary';
-                entryDiv.classList.add('tempo');
-            } else if (keyword.includes('PROB')) {
-                prettyKeyword = keyword + ' (Prob)';
-            }
-            
-            entryDiv.innerHTML = `<div class="dash-taf-title">${prettyKeyword}</div><div class="dash-taf-body">${content}</div>`;
-            container.appendChild(entryDiv);
+        if (window.TAFForecast) {
+            window.TAFForecast.render(container, tafText, selectedAirport);
+        } else {
+            container.innerHTML = '<p class="empty-state">Forecast engine unavailable.</p>';
         }
     }
 

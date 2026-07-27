@@ -228,12 +228,6 @@
                         <div><span>DEW POINT</span><strong id="metar-dewp">—</strong></div>
                     </div>
                     <div class="weather-block"><div class="block-heading"><h3>METAR</h3><button id="copy-metar" class="copy-button" type="button">Copy</button></div><code id="metar-raw">Waiting for data…</code><p id="metar-issued" class="issued-time">—</p></div>
-                    <div class="weather-block forecast-table-block">
-                        <div class="block-heading"><h3>FORECAST</h3><span id="forecast-validity" style="font-size:11px;color:#718096;"></span></div>
-                        <div id="taf-forecast-container">
-                            <p class="empty-state">Select an airport to view the forecast.</p>
-                        </div>
-                    </div>
                     <div class="weather-block taf-block"><div class="block-heading"><h3>TAF</h3><span>RAW</span></div><code id="taf-raw">Waiting for data…</code><div id="taf-parsed" class="taf-parsed"></div></div>
                     <div class="wind-visualizer"><div class="block-heading"><h3>WIND / RUNWAY</h3><span id="runway-label">—</span></div><canvas id="wind-canvas" width="260" height="260"></canvas><p>Diagram shows the reference runway heading; not the operationally active runway.</p>
                     </div>
@@ -396,9 +390,12 @@
                     </div>
                 </div>
 
-                <div class="dash-section mt-4">
-                    <h3>Terminal Aerodrome Forecast (TAF)</h3>
-                    <div id="dash-taf-container" class="dash-taf-list">
+                <div class="dash-section mt-4 forecast-table-block" style="padding-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 12px; padding-bottom: 8px;">
+                        <h3 style="margin: 0; padding: 0; border: none;">Terminal Aerodrome Forecast (TAF)</h3>
+                        <span id="forecast-validity" style="font-size:12px;color:#90cdf4;"></span>
+                    </div>
+                    <div id="dash-taf-container">
                         <!-- Populated by JS -->
                     </div>
                     <code id="dash-raw-taf-text" style="display:block; margin-top:16px; color:#99c2ff; font-family:'DM Mono', monospace;"></code>
