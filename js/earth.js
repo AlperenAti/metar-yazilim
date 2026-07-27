@@ -16,8 +16,8 @@ window.EarthView = (function() {
             .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
             .pointLat(d => parseFloat(d.lat))
             .pointLng(d => parseFloat(d.lon))
-            .pointAltitude(0.01)
-            .pointRadius(0.15)
+            .pointAltitude(0.001)
+            .pointRadius(d => d.t === 1 ? 0.05 : 0.03)
             .pointColor(d => d.t === 1 ? '#00f0ff' : '#007acc')
             .pointResolution(32)
             .pointLabel(d => `
@@ -46,8 +46,8 @@ window.EarthView = (function() {
                 setTimeout(() => loader.style.display = 'none', 500);
             });
 
-        // Auto-rotate
-        globe.controls().autoRotate = true;
+        // Auto-rotate disabled per user request
+        globe.controls().autoRotate = false;
         globe.controls().autoRotateSpeed = 0.5;
 
         // Fetch and filter airports
