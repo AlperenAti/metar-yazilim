@@ -10,52 +10,58 @@
     });
     darkLayer.addTo(map);
 
-    // --- Distance Measurement Tool ---
-    let measureMode = false;
+    // --- Measurement Tools ---
+    let measureTool = null; // 'distance' or 'area' or null
     let measurePoints = [];
     let measureLine = null;
     let measureTempLine = null;
     let measureTooltip = null;
     let measureMarkers = [];
-
-    let toggleMeasureMode = null;
+    
+    let btnDistance = null;
+    let btnArea = null;
 
     const MeasureControl = L.Control.extend({
         options: { position: 'topright' },
         onAdd: function () {
             const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-            container.style.backgroundColor = 'rgba(15, 23, 42, 0.9)';
-            container.style.color = '#fff';
-            container.style.cursor = 'pointer';
-            container.style.width = '34px';
-            container.style.height = '34px';
             container.style.display = 'flex';
-            container.style.alignItems = 'center';
-            container.style.justifyContent = 'center';
-            container.style.borderRadius = '8px';
-            container.style.border = '1px solid rgba(255,255,255,0.1)';
-            container.style.backdropFilter = 'blur(10px)';
-            container.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
-            container.title = 'Measure Distance (Click to toggle)';
-            // Ruler icon
-            container.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21L3 3M21 3L3 21"/></svg>`; 
+            container.style.flexDirection = 'column';
+            container.style.gap = '8px';
+            container.style.boxShadow = 'none';
+            container.style.border = 'none';
+            container.style.backgroundColor = 'transparent';
 
-            toggleMeasureMode = function () {
-                measureMode = !measureMode;
-                if (measureMode) {
-                    container.style.backgroundColor = '#0ea5e9';
-                    document.getElementById('map').style.cursor = 'crosshair';
-                    clearMeasure();
-                } else {
-                    container.style.backgroundColor = 'rgba(15, 23, 42, 0.9)';
-                    document.getElementById('map').style.cursor = '';
-                    clearMeasure();
-                }
-            };
+            function createBtn(title, svg) {
+                const btn = L.DomUtil.create('div', '');
+                btn.style.backgroundColor = 'rgba(15, 23, 42, 0.9)';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'pointer';
+                btn.style.width = '34px';
+                btn.style.height = '34px';
+                btn.style.display = 'flex';
+                btn.style.alignItems = 'center';
+                btn.style.justifyContent = 'center';
+                btn.style.borderRadius = '8px';
+                btn.style.border = '1px solid rgba(255,255,255,0.1)';
+                btn.style.backdropFilter = 'blur(10px)';
+                btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
+                btn.title = title;
+                btn.innerHTML = svg;
+                container.appendChild(btn);
+                return btn;
+            }
 
-            container.onclick = function (e) {
+            btnDistance = createBtn('Measure Distance', `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21L3 3M21 3L3 21"/></svg>`);
+            btnArea = createBtn('Measure Area', `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20L12 4l9 16H3z"/></svg>`);
+
+            btnDistance.onclick = (e) => {
                 L.DomEvent.stopPropagation(e);
-                toggleMeasureMode();
+                toggleTool('distance');
+            };
+            btnArea.onclick = (e) => {
+                L.DomEvent.stopPropagation(e);
+                toggleTool('area');
             };
             return container;
         }
@@ -74,8 +80,41 @@
         measurePoints = [];
     }
 
+    function toggleTool(tool) {
+        if (measureTool === tool) {
+            measureTool = null;
+        } else {
+            measureTool = tool;
+        }
+        
+        btnDistance.style.backgroundColor = (measureTool === 'distance') ? '#0ea5e9' : 'rgba(15, 23, 42, 0.9)';
+        btnArea.style.backgroundColor = (measureTool === 'area') ? '#0ea5e9' : 'rgba(15, 23, 42, 0.9)';
+        
+        if (measureTool) {
+            document.getElementById('map').style.cursor = 'crosshair';
+        } else {
+            document.getElementById('map').style.cursor = '';
+        }
+        clearMeasure();
+    }
+
+    function getSphericalArea(latlngs) {
+        let area = 0;
+        const radius = 6378137;
+        const rad = Math.PI / 180;
+        if (latlngs.length > 2) {
+            for (let i = 0; i < latlngs.length; i++) {
+                let p1 = latlngs[i];
+                let p2 = latlngs[(i + 1) % latlngs.length];
+                area += (p2.lng - p1.lng) * rad * (2 + Math.sin(p1.lat * rad) + Math.sin(p2.lat * rad));
+            }
+            area = area * radius * radius / 2.0;
+        }
+        return Math.abs(area);
+    }
+
     map.on('click', (e) => {
-        if (!measureMode) return;
+        if (!measureTool) return;
         measurePoints.push(e.latlng);
         
         const circle = L.circleMarker(e.latlng, {
@@ -84,47 +123,66 @@
         measureMarkers.push(circle);
 
         if (measurePoints.length > 1) {
-            if (!measureLine) {
+            if (measureLine) map.removeLayer(measureLine);
+            
+            if (measureTool === 'distance') {
                 measureLine = L.polyline(measurePoints, { color: '#0ea5e9', weight: 3, dashArray: '5, 8' }).addTo(map);
-            } else {
-                measureLine.setLatLngs(measurePoints);
+            } else if (measureTool === 'area') {
+                measureLine = L.polygon(measurePoints, { color: '#0ea5e9', weight: 3, dashArray: '5, 8', fillColor: '#0ea5e9', fillOpacity: 0.2 }).addTo(map);
             }
         }
     });
 
-    map.on('mousemove', (e) => {
-        if (!measureMode || measurePoints.length === 0) return;
-        
-        const lastPt = measurePoints[measurePoints.length - 1];
-        if (!measureTempLine) {
-            measureTempLine = L.polyline([lastPt, e.latlng], { color: '#0ea5e9', weight: 3, dashArray: '5, 8', opacity: 0.6 }).addTo(map);
-        } else {
-            measureTempLine.setLatLngs([lastPt, e.latlng]);
-        }
-
-        let totalDist = 0;
-        for (let i = 0; i < measurePoints.length - 1; i++) {
-            totalDist += map.distance(measurePoints[i], measurePoints[i+1]);
-        }
-        totalDist += map.distance(lastPt, e.latlng);
-
-        const nm = (totalDist / 1852).toFixed(1);
-        const km = (totalDist / 1000).toFixed(1);
-        
+    function updateTooltip(latlng, html) {
         if (!measureTooltip) {
             measureTooltip = L.tooltip({ permanent: true, className: 'measure-tooltip', direction: 'right', offset: [15, 0] })
-                .setLatLng(e.latlng)
-                .setContent(`<b>${nm} NM</b><br><small>${km} km</small>`)
+                .setLatLng(latlng)
+                .setContent(html)
                 .addTo(map);
         } else {
-            measureTooltip.setLatLng(e.latlng).setContent(`<b>${nm} NM</b><br><small>${km} km</small>`);
+            measureTooltip.setLatLng(latlng).setContent(html);
+        }
+    }
+
+    map.on('mousemove', (e) => {
+        if (!measureTool || measurePoints.length === 0) return;
+        
+        const lastPt = measurePoints[measurePoints.length - 1];
+        const ptsWithCurrent = [...measurePoints, e.latlng];
+        
+        if (measureTempLine) map.removeLayer(measureTempLine);
+
+        if (measureTool === 'distance') {
+            measureTempLine = L.polyline([lastPt, e.latlng], { color: '#0ea5e9', weight: 3, dashArray: '5, 8', opacity: 0.6 }).addTo(map);
+            
+            let totalDist = 0;
+            for (let i = 0; i < ptsWithCurrent.length - 1; i++) {
+                totalDist += map.distance(ptsWithCurrent[i], ptsWithCurrent[i+1]);
+            }
+            
+            const nm = (totalDist / 1852).toFixed(1);
+            const km = (totalDist / 1000).toFixed(1);
+            updateTooltip(e.latlng, `<b>${nm} NM</b><br><small>${km} km</small>`);
+            
+        } else if (measureTool === 'area') {
+            measureTempLine = L.polygon(ptsWithCurrent, { color: '#0ea5e9', weight: 3, dashArray: '5, 8', opacity: 0.6, fillColor: '#0ea5e9', fillOpacity: 0.2 }).addTo(map);
+            
+            if (ptsWithCurrent.length > 2) {
+                const sqMeters = getSphericalArea(ptsWithCurrent);
+                const sqKm = (sqMeters / 1000000).toFixed(2);
+                const sqNm = (sqMeters / 3429904).toFixed(2);
+                // Formatting with commas for readability
+                const sqKmStr = parseFloat(sqKm).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                const sqNmStr = parseFloat(sqNm).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                updateTooltip(e.latlng, `<b>${sqKmStr} km²</b><br><small>${sqNmStr} NM²</small>`);
+            } else {
+                updateTooltip(e.latlng, `<b>Click to add points</b>`);
+            }
         }
     });
 
     map.on('contextmenu', (e) => {
-        if (measureMode && toggleMeasureMode) {
-            toggleMeasureMode();
-        }
+        if (measureTool) toggleTool(measureTool);
     });
     // -----------------------------
 
