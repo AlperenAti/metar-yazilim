@@ -295,6 +295,36 @@
             timestampEl.textContent = `Clouds updated: ${zulu}`;
             timestampEl.classList.remove('hidden');
             
+        } else if (type === 'temperature') {
+            currentWeatherLayer = L.tileLayer(`https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${OWM_API_KEY}`, {
+                opacity: 0.65, maxZoom: 18, attribution: '© OpenWeatherMap', className: 'weather-temp-layer'
+            }).addTo(map);
+            
+            const now = new Date();
+            const zulu = `${now.getUTCHours().toString().padStart(2, '0')}:${now.getUTCMinutes().toString().padStart(2, '0')} Z`;
+            timestampEl.textContent = `Temperature updated: ${zulu}`;
+            timestampEl.classList.remove('hidden');
+            
+        } else if (type === 'wind') {
+            currentWeatherLayer = L.tileLayer(`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${OWM_API_KEY}`, {
+                opacity: 0.65, maxZoom: 18, attribution: '© OpenWeatherMap', className: 'weather-wind-layer'
+            }).addTo(map);
+            
+            const now = new Date();
+            const zulu = `${now.getUTCHours().toString().padStart(2, '0')}:${now.getUTCMinutes().toString().padStart(2, '0')} Z`;
+            timestampEl.textContent = `Wind Speed Heatmap updated: ${zulu}`;
+            timestampEl.classList.remove('hidden');
+            
+        } else if (type === 'pressure') {
+            currentWeatherLayer = L.tileLayer(`https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=${OWM_API_KEY}`, {
+                opacity: 0.65, maxZoom: 18, attribution: '© OpenWeatherMap', className: 'weather-pressure-layer'
+            }).addTo(map);
+            
+            const now = new Date();
+            const zulu = `${now.getUTCHours().toString().padStart(2, '0')}:${now.getUTCMinutes().toString().padStart(2, '0')} Z`;
+            timestampEl.textContent = `Sea Level Pressure updated: ${zulu}`;
+            timestampEl.classList.remove('hidden');
+            
         } else if (type === 'satellite') {
             currentWeatherLayer = L.tileLayer.wms('https://mesonet.agron.iastate.edu/cgi-bin/wms/goes/global_ir.cgi', {
                 layers: 'global_ir',
