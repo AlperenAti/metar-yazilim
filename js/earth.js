@@ -1,8 +1,10 @@
 window.EarthView = (function() {
     let globe = null;
     let initialized = false;
+    let globeReady = false;   // true after onGlobeReady fires
     let airportsData = [];
     let layerMeshes = {}; // id -> THREE.Mesh
+    let pendingLayers = []; // layers requested before globe was ready
 
     // -------------------------------------------------------------------
     // Layer Definitions — NASA GIBS equirectangular WMS
@@ -59,18 +61,9 @@ window.EarthView = (function() {
     // -------------------------------------------------------------------
     // Layer management
     // -------------------------------------------------------------------
-    function addLayer(id) {
-        if (!globe || !window.THREE) return;
-        if (layerMeshes[id]) {
-            // Already loaded — just make sure it's in scene
-            if (!globe.scene().children.includes(layerMeshes[id])) {
-                globe.scene().add(layerMeshes[id]);
-            }
-            return;
-        }
-
+    function _buildMesh(id) {
         const cfg = GLOBE_LAYERS[id];
-        if (!cfg) return;
+        if (!cfg || !globe || !window.THREE) return;
 
         const loader = new THREE.TextureLoader();
         loader.crossOrigin = 'anonymous';
@@ -91,7 +84,7 @@ window.EarthView = (function() {
 
             layerMeshes[id] = mesh;
 
-            // Only add if checkbox is still checked
+            // Only add to scene if checkbox is still checked
             const cb = document.getElementById('earth_layer_' + id);
             if (cb && cb.checked) {
                 globe.scene().add(mesh);
@@ -105,8 +98,24 @@ window.EarthView = (function() {
                 })();
             }
         }, undefined, (err) => {
-            console.warn(`[EarthView] Failed to load layer "${id}":`, err);
+            console.warn('[EarthView] Failed to load layer "' + id + '":', err);
         });
+    }
+
+    function addLayer(id) {
+        if (!globeReady) {
+            // Globe not ready yet — queue it
+            if (!pendingLayers.includes(id)) pendingLayers.push(id);
+            return;
+        }
+        if (layerMeshes[id]) {
+            // Already loaded — just make sure it's in scene
+            if (!globe.scene().children.includes(layerMeshes[id])) {
+                globe.scene().add(layerMeshes[id]);
+            }
+            return;
+        }
+        _buildMesh(id);
     }
 
     function removeLayer(id) {
@@ -172,6 +181,9 @@ window.EarthView = (function() {
                 loader.style.opacity = '0';
                 setTimeout(() => loader.style.display = 'none', 500);
 
+                // Mark globe as ready
+                globeReady = true;
+
                 // Real-time Day/Night lighting
                 if (window.THREE) {
                     const updateSunLight = () => {
@@ -195,6 +207,10 @@ window.EarthView = (function() {
                     updateSunLight();
                     setInterval(updateSunLight, 60000);
                 }
+
+                // Process any layers that were queued before globe was ready
+                pendingLayers.forEach(id => addLayer(id));
+                pendingLayers = [];
 
                 // Activate any pre-checked layers
                 syncAllLayers();
