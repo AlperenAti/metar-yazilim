@@ -113,23 +113,76 @@
         return Math.abs(area);
     }
 
-    map.on('click', (e) => {
-        if (!measureTool) return;
-        measurePoints.push(e.latlng);
-        
-        const circle = L.circleMarker(e.latlng, {
-            radius: 4, color: '#fff', fillColor: '#0ea5e9', fillOpacity: 1, weight: 2
-        }).addTo(map);
-        measureMarkers.push(circle);
-
-        if (measurePoints.length > 1) {
-            if (measureLine) map.removeLayer(measureLine);
+    map.on('click', async (e) => {
+        if (measureTool) {
+            measurePoints.push(e.latlng);
             
-            if (measureTool === 'distance') {
-                measureLine = L.polyline(measurePoints, { color: '#0ea5e9', weight: 3, dashArray: '5, 8' }).addTo(map);
-            } else if (measureTool === 'area') {
-                measureLine = L.polygon(measurePoints, { color: '#0ea5e9', weight: 3, dashArray: '5, 8', fillColor: '#0ea5e9', fillOpacity: 0.2 }).addTo(map);
+            const circle = L.circleMarker(e.latlng, {
+                radius: 4, color: '#fff', fillColor: '#0ea5e9', fillOpacity: 1, weight: 2
+            }).addTo(map);
+            measureMarkers.push(circle);
+
+            if (measurePoints.length > 1) {
+                if (measureLine) map.removeLayer(measureLine);
+                
+                if (measureTool === 'distance') {
+                    measureLine = L.polyline(measurePoints, { color: '#0ea5e9', weight: 3, dashArray: '5, 8' }).addTo(map);
+                } else if (measureTool === 'area') {
+                    measureLine = L.polygon(measurePoints, { color: '#0ea5e9', weight: 3, dashArray: '5, 8', fillColor: '#0ea5e9', fillOpacity: 0.2 }).addTo(map);
+                }
             }
+            return;
+        }
+
+        // Weather Layer Click Logic
+        const activeRadio = document.querySelector('input[name="weather_layer"]:checked');
+        const activeLayer = activeRadio ? activeRadio.value : 'none';
+        
+        if (activeLayer === 'none' || activeLayer === 'satellite' || activeLayer === 'wind_grid') return;
+        
+        const { lat, lng } = e.latlng;
+        
+        const popup = L.popup({ className: 'custom-map-popup' })
+            .setLatLng(e.latlng)
+            .setContent(`<div style="text-align:center;font-family:'Inter',sans-serif;font-size:13px;padding:4px;">
+                <div style="color:#64748b;font-size:11px;margin-bottom:6px;">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+                <div style="color:#1e293b;font-weight:500;">Fetching data...</div>
+            </div>`)
+            .openOn(map);
+
+        let varName = '';
+        if (activeLayer === 'temperature') varName = 'temperature_2m';
+        else if (activeLayer === 'pressure') varName = 'surface_pressure';
+        else if (activeLayer === 'wind') varName = 'wind_speed_10m';
+        else if (activeLayer === 'clouds') varName = 'cloud_cover';
+        else if (activeLayer === 'radar') varName = 'precipitation';
+
+        try {
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=${varName}`);
+            const data = await res.json();
+            
+            if (data && data.current && typeof data.current[varName] !== 'undefined') {
+                const val = data.current[varName];
+                const unit = data.current_units[varName];
+                let label = '';
+                if (activeLayer === 'temperature') label = 'Temperature';
+                else if (activeLayer === 'pressure') label = 'Pressure';
+                else if (activeLayer === 'wind') label = 'Wind Speed';
+                else if (activeLayer === 'clouds') label = 'Cloud Cover';
+                else if (activeLayer === 'radar') label = 'Precipitation';
+
+                popup.setContent(`<div style="text-align:center;font-family:'Inter',sans-serif;font-size:13px;padding:4px;">
+                    <div style="color:#64748b;font-size:11px;margin-bottom:6px;">${lat.toFixed(4)}°, ${lng.toFixed(4)}°</div>
+                    <div style="color:#0ea5e9;margin-top:4px;font-size:14px;font-weight:700;">${label}: ${val} ${unit}</div>
+                </div>`);
+            } else {
+                throw new Error("No data");
+            }
+        } catch (err) {
+            popup.setContent(`<div style="text-align:center;font-family:'Inter',sans-serif;font-size:13px;padding:4px;">
+                <div style="color:#64748b;font-size:11px;margin-bottom:6px;">${lat.toFixed(4)}°, ${lng.toFixed(4)}°</div>
+                <div style="color:#dc2626;margin-top:4px;font-weight:600;">Data unavailable</div>
+            </div>`);
         }
     });
 
