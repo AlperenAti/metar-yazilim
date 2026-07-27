@@ -478,18 +478,48 @@
         let blurTimeout;
 
         inputElement.addEventListener('input', () => {
-            const val = inputElement.value.trim().toLowerCase();
+            const val = inputElement.value.trim();
             list.innerHTML = '';
             if (!val || val.length < 2) {
                 list.classList.add('hidden');
                 return;
             }
+
+            function normalizeTr(text) {
+                if (!text) return '';
+                return text.replace(/İ/g, 'i').replace(/I/g, 'i')
+                           .replace(/ı/g, 'i').replace(/i/g, 'i')
+                           .replace(/Ö/g, 'o').replace(/ö/g, 'o')
+                           .replace(/Ü/g, 'u').replace(/ü/g, 'u')
+                           .replace(/Ş/g, 's').replace(/ş/g, 's')
+                           .replace(/Ğ/g, 'g').replace(/ğ/g, 'g')
+                           .replace(/Ç/g, 'c').replace(/ç/g, 'c')
+                           .toLowerCase();
+            }
             
-            // Match ICAO or Name
-            const matches = window.MapManager.airports.filter(a => 
-                a.icao.toLowerCase().includes(val) || 
-                (a.name && a.name.toLowerCase().includes(val))
-            ).slice(0, 10);
+            const normalizedVal = normalizeTr(val);
+            let matches = [];
+
+            if (window.Fuse) {
+                if (!window._airportSearchFuse) {
+                    window._airportSearchFuseList = window.MapManager.airports.map(a => ({
+                        ...a,
+                        searchStr: normalizeTr(a.icao + ' ' + (a.name || ''))
+                    }));
+                    window._airportSearchFuse = new window.Fuse(window._airportSearchFuseList, {
+                        keys: ['searchStr'],
+                        threshold: 0.3,
+                        ignoreLocation: true
+                    });
+                }
+                const results = window._airportSearchFuse.search(normalizedVal);
+                matches = results.slice(0, 10).map(r => r.item);
+            } else {
+                matches = window.MapManager.airports.filter(a => {
+                   const searchStr = normalizeTr(a.icao + ' ' + (a.name || ''));
+                   return searchStr.includes(normalizedVal);
+                }).slice(0, 10);
+            }
             
             if (matches.length > 0) {
                 matches.forEach(m => {
