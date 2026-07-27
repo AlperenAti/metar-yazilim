@@ -66,6 +66,15 @@
             </div>
         </div>
 
+        <div id="weather-playback-container" class="weather-playback-container glass-panel hidden">
+            <button id="playback-play-btn" class="icon-button" aria-label="Play/Pause" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-play" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-pause hidden" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            </button>
+            <input type="range" id="playback-slider" min="0" max="0" value="0" step="1" aria-label="Timeline slider">
+            <span id="playback-time-label" class="playback-time-label">--:-- Z</span>
+        </div>
+
         <div class="weather-timestamp hidden" id="weather-timestamp"></div>
         <aside id="dashboard" class="dashboard glass-panel" aria-label="Airspace dashboard">
             <div class="panel-heading">

@@ -160,3 +160,78 @@ button { color: inherit; }
 
 /* Runway Styles */
 .runway-label { color: #cc6600; font-weight: 700; font-size: 11px; font-family: monospace; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; background: transparent; border: none; box-shadow: none; white-space: nowrap; }
+
+/* Weather Playback UI */
+.weather-playback-container {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: rgba(13, 23, 33, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.weather-playback-container.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 10px);
+}
+.weather-playback-container .icon-button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+.weather-playback-container .icon-button:hover {
+    background: #4da6ff;
+    color: #000;
+}
+.weather-playback-container .icon-button svg {
+    width: 16px;
+    height: 16px;
+}
+#playback-slider {
+    -webkit-appearance: none;
+    width: 150px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+#playback-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #4da6ff;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+#playback-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.3);
+}
+.playback-time-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+    min-width: 50px;
+    text-align: right;
+}

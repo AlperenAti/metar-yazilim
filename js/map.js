@@ -170,10 +170,76 @@
 
     // WindGridLayer is now implemented externally in wind-grid.js as window.WindGridLayer
 
+    // Radar Playback State
+    let radarLayers = [];
+    let radarFrames = [];
+    let radarCurrentFrame = 0;
+    let radarPlayInterval = null;
+    let isRadarPlaying = false;
+
+    const radarPlayBtn = document.getElementById('playback-play-btn');
+    const radarSlider = document.getElementById('playback-slider');
+    const radarTimeLabel = document.getElementById('playback-time-label');
+    const playbackContainer = document.getElementById('weather-playback-container');
+    const iconPlay = radarPlayBtn ? radarPlayBtn.querySelector('.icon-play') : null;
+    const iconPause = radarPlayBtn ? radarPlayBtn.querySelector('.icon-pause') : null;
+
+    function showRadarFrame(idx) {
+        if (!radarFrames.length) return;
+        radarLayers.forEach((layer, i) => {
+            layer.setOpacity(i === idx ? 0.65 : 0);
+        });
+        const d = new Date(radarFrames[idx].time * 1000);
+        if (radarTimeLabel) {
+            radarTimeLabel.textContent = `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')} Z`;
+        }
+        if (radarSlider) radarSlider.value = idx;
+        radarCurrentFrame = idx;
+    }
+
+    function startRadarPlayback() {
+        if (!radarFrames.length) return;
+        isRadarPlaying = true;
+        if (iconPlay) iconPlay.classList.add('hidden');
+        if (iconPause) iconPause.classList.remove('hidden');
+        if (radarCurrentFrame === radarFrames.length - 1) {
+            radarCurrentFrame = 0;
+        }
+        radarPlayInterval = setInterval(() => {
+            radarCurrentFrame++;
+            if (radarCurrentFrame >= radarFrames.length) {
+                radarCurrentFrame = 0;
+            }
+            showRadarFrame(radarCurrentFrame);
+        }, 800); // Fast animation loop
+    }
+
+    function stopRadarPlayback() {
+        isRadarPlaying = false;
+        if (iconPlay) iconPlay.classList.remove('hidden');
+        if (iconPause) iconPause.classList.add('hidden');
+        if (radarPlayInterval) clearInterval(radarPlayInterval);
+    }
+
+    if (radarPlayBtn && radarSlider) {
+        radarPlayBtn.addEventListener('click', () => {
+            if (isRadarPlaying) stopRadarPlayback();
+            else startRadarPlayback();
+        });
+
+        radarSlider.addEventListener('input', (e) => {
+            stopRadarPlayback();
+            showRadarFrame(parseInt(e.target.value, 10));
+        });
+    }
+
     async function setWeatherOverlay(type) {
         if (currentWeatherLayer) {
             map.removeLayer(currentWeatherLayer);
             currentWeatherLayer = null;
+            stopRadarPlayback();
+            if (playbackContainer) playbackContainer.classList.add('hidden');
+            radarLayers = [];
         }
         
         const timestampEl = document.getElementById('weather-timestamp');
@@ -192,17 +258,27 @@
             try {
                 const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
                 const data = await res.json();
-                const latestPath = data.radar.past[data.radar.past.length - 1].path;
-                const latestTime = data.radar.past[data.radar.past.length - 1].time;
+                radarFrames = data.radar.past;
                 
-                currentWeatherLayer = L.tileLayer(`${data.host}${latestPath}/256/{z}/{x}/{y}/2/1_1.png`, {
-                    opacity: 0.65, maxZoom: 18, maxNativeZoom: 7, attribution: '© RainViewer'
-                }).addTo(map);
+                currentWeatherLayer = L.layerGroup().addTo(map);
+                radarLayers = [];
                 
-                const d = new Date(latestTime * 1000);
-                const zulu = `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')} Z`;
-                timestampEl.textContent = `Radar updated: ${zulu}`;
-                timestampEl.classList.remove('hidden');
+                radarFrames.forEach((frame) => {
+                    const layer = L.tileLayer(`${data.host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`, {
+                        opacity: 0, maxZoom: 18, maxNativeZoom: 7, attribution: '© RainViewer', className: 'weather-radar-layer'
+                    });
+                    currentWeatherLayer.addLayer(layer);
+                    radarLayers.push(layer);
+                });
+                
+                if (radarSlider) {
+                    radarSlider.max = radarFrames.length - 1;
+                    radarCurrentFrame = radarFrames.length - 1;
+                    showRadarFrame(radarCurrentFrame);
+                }
+                
+                if (playbackContainer) playbackContainer.classList.remove('hidden');
+                timestampEl.classList.add('hidden');
                 
             } catch (e) {
                 console.error('Failed to load RainViewer radar', e);
