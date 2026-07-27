@@ -131,15 +131,8 @@ window.EarthView = (function() {
             .pointLng(d => parseFloat(d.lon))
             .pointAltitude(0)
             .pointRadius(d => d.t === 1 ? 0.05 : 0.025)
-            .pointColor(d => d.t === 1 ? '#ff3333' : '#ff9900')
+            .pointColor(d => d.t === 1 ? '#ff3333' : '#00f0ff')
             .pointResolution(32)
-            .ringsData([]) // Will be populated when data loads
-            .ringLat(d => parseFloat(d.lat))
-            .ringLng(d => parseFloat(d.lon))
-            .ringColor(d => d.t === 1 ? '#ff3333' : '#ff9900')
-            .ringMaxRadius(d => d.t === 1 ? 1.5 : 0.5)
-            .ringPropagationSpeed(1)
-            .ringRepeatPeriod(1500)
             .pointLabel(d => `
                 <div style="background:rgba(7,17,29,0.92);padding:8px 12px;border-radius:8px;border:1px solid rgba(0,240,255,0.3);font-family:'Inter',sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.6);">
                     <div style="color:#fff;font-weight:700;font-size:14px;margin-bottom:3px;">${d.i}</div>
@@ -212,7 +205,6 @@ window.EarthView = (function() {
             const data = await res.json();
             airportsData = data.filter(a => a.t === 1 || a.t === 2);
             globe.pointsData(airportsData);
-            globe.ringsData(airportsData);
         } catch (e) {
             console.error('[EarthView] Failed to load airports:', e);
         }
