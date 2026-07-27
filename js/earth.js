@@ -49,80 +49,16 @@ window.EarthView = (function() {
     // -------------------------------------------------------------------
     // Layer management
     // -------------------------------------------------------------------
-    function _buildMesh(id) {
-        const cfg = GLOBE_LAYERS[id];
-        if (!cfg || !globe || !window.THREE) return;
-
-        const loader = new THREE.TextureLoader();
-        loader.crossOrigin = 'anonymous';
-
-        loader.load(cfg.getUrl(), (tex) => {
-            const globeRadius = globe.getGlobeRadius();
-            const mesh = new THREE.Mesh(
-                new THREE.SphereGeometry(globeRadius * cfg.altFactor, 72, 72),
-                new THREE.MeshBasicMaterial({
-                    map: tex,
-                    transparent: true,
-                    opacity: cfg.opacity,
-                    blending: THREE[cfg.blending] || THREE.AdditiveBlending,
-                    depthWrite: false,
-                    side: THREE.FrontSide
-                })
-            );
-
-            layerMeshes[id] = mesh;
-
-            // Only add to scene if checkbox is still checked
-            const cb = document.getElementById('earth_layer_' + id);
-            if (cb && cb.checked) {
-                globe.scene().add(mesh);
-            }
-
-            // Slow rotation for cloud layer
-            if (cfg.rotate) {
-                (function spin() {
-                    if (layerMeshes[id]) layerMeshes[id].rotation.y -= 0.00015;
-                    requestAnimationFrame(spin);
-                })();
-            }
-        }, undefined, (err) => {
-            console.warn('[EarthView] Failed to load layer "' + id + '":', err);
-        });
-    }
-
-    function addLayer(id) {
-        if (!globeReady) {
-            // Globe not ready yet — queue it
-            if (!pendingLayers.includes(id)) pendingLayers.push(id);
-            return;
-        }
-        if (layerMeshes[id]) {
-            // Already loaded — just make sure it's in scene
-            if (!globe.scene().children.includes(layerMeshes[id])) {
-                globe.scene().add(layerMeshes[id]);
-            }
-            return;
-        }
-        _buildMesh(id);
-    }
-
-    function removeLayer(id) {
-        if (layerMeshes[id] && globe) {
-            globe.scene().remove(layerMeshes[id]);
-        }
-    }
-
     function syncAllLayers() {
-        if (!globe) return;
+        if (!globe || !globeReady) return;
+        const activeLayers = [];
         Object.keys(GLOBE_LAYERS).forEach(id => {
             const cb = document.getElementById('earth_layer_' + id);
-            if (!cb) return;
-            if (cb.checked) {
-                addLayer(id);
-            } else {
-                removeLayer(id);
+            if (cb && cb.checked) {
+                activeLayers.push({ id, ...GLOBE_LAYERS[id] });
             }
         });
+        globe.customLayerData(activeLayers);
     }
 
     // -------------------------------------------------------------------
@@ -150,6 +86,26 @@ window.EarthView = (function() {
                     <div style="color:#a0aec0;font-size:12px;">${d.n}</div>
                 </div>
             `)
+            .customLayerData([])
+            .customThreeObject(d => {
+                const mesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(globe.getGlobeRadius() * d.altFactor, 72, 72),
+                    new THREE.MeshBasicMaterial({ transparent: true, opacity: d.opacity, blending: THREE[d.blending] || THREE.AdditiveBlending, depthWrite: false, side: THREE.FrontSide })
+                );
+                const loader = new THREE.TextureLoader();
+                loader.crossOrigin = 'anonymous';
+                loader.load(d.getUrl(), tex => {
+                    mesh.material.map = tex;
+                    mesh.material.needsUpdate = true;
+                });
+                return mesh;
+            })
+            .customThreeObjectUpdate((obj, d) => {
+                if (d.rotate) {
+                    Object.assign(obj.__data, { rotationY: (obj.__data.rotationY || 0) + 0.0005 });
+                    obj.rotation.y = -obj.__data.rotationY;
+                }
+            })
             .onPointClick(point => {
                 const ap = {
                     icao: point.i,
@@ -171,6 +127,9 @@ window.EarthView = (function() {
 
                 // Mark globe as ready
                 globeReady = true;
+                
+                // Initialize currently checked layers
+                syncAllLayers();
 
                 // Real-time Day/Night lighting
                 if (window.THREE) {
@@ -243,8 +202,7 @@ window.EarthView = (function() {
             const cb = document.getElementById('earth_layer_' + id);
             if (!cb) return;
             cb.addEventListener('change', () => {
-                if (cb.checked) addLayer(id);
-                else removeLayer(id);
+                syncAllLayers();
             });
         });
 
@@ -275,5 +233,12 @@ window.EarthView = (function() {
         document.getElementById('map').style.visibility = 'visible';
     };
 
-    return { init, show, hide };
+    const flyTo = (lat, lon) => {
+        if (!globe) return;
+        // The altitude 0.5 is somewhat zoomed in, you can adjust as needed. 
+        // transition time is 1500ms
+        globe.pointOfView({ lat: lat, lng: lon, altitude: 0.5 }, 1500);
+    };
+
+    return { init, show, hide, flyTo };
 })();

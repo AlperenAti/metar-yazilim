@@ -438,7 +438,13 @@
             dashboard.classList.add('collapsed');
         }
 
-        if (focusMap) window.MapManager.focusAirport(airport);
+        if (focusMap) {
+            if (document.body.classList.contains('earth-active') && window.EarthView && window.EarthView.flyTo) {
+                window.EarthView.flyTo(airport.lat, airport.lon);
+            } else {
+                window.MapManager.focusAirport(airport);
+            }
+        }
         const url = new URL(window.location.href);
         url.searchParams.set('icao', airport.icao);
         window.history.replaceState({}, '', url);
