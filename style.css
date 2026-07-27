@@ -574,3 +574,21 @@ button { color: inherit; }
 .autocomplete-list.hidden {
     display: none;
 }
+
+#open-dashboard-btn {
+    background: var(--brand-dim);
+    color: var(--brand);
+    border: 1px solid var(--brand);
+    border-radius: 6px;
+    font-weight: 600;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+#open-dashboard-btn:hover {
+    background: var(--brand);
+    color: var(--surface-strong);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--brand-dim);
+}
