@@ -49,16 +49,69 @@ window.EarthView = (function() {
     // -------------------------------------------------------------------
     // Layer management
     // -------------------------------------------------------------------
-    function syncAllLayers() {
-        if (!globe || !globeReady) return;
-        const activeLayers = [];
-        Object.keys(GLOBE_LAYERS).forEach(id => {
-            const cb = document.getElementById('earth_layer_' + id);
-            if (cb && cb.checked) {
-                activeLayers.push({ id, ...GLOBE_LAYERS[id] });
+    function _buildMesh(id) {
+        const cfg = GLOBE_LAYERS[id];
+        if (!cfg || !globe || !window.THREE) return;
+
+        const loader = new THREE.TextureLoader();
+        loader.crossOrigin = 'anonymous';
+
+        const globeRadius = globe.getGlobeRadius();
+        const mesh = new THREE.Mesh(
+            new THREE.SphereGeometry(globeRadius * cfg.altFactor, 72, 72),
+            new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0, // start invisible until loaded
+                blending: THREE[cfg.blending] || THREE.AdditiveBlending,
+                depthWrite: false,
+                side: THREE.FrontSide
+            })
+        );
+        mesh.rotation.y = Math.PI; // Align texture properly with the globe
+        layerMeshes[id] = mesh;
+
+        // Only add to scene if checkbox is checked
+        const cb = document.getElementById('earth_layer_' + id);
+        if (cb && cb.checked) {
+            globe.scene().add(mesh);
+        }
+
+        if (cfg.rotate) {
+            (function spin() {
+                if (layerMeshes[id]) layerMeshes[id].rotation.y -= 0.00015;
+                requestAnimationFrame(spin);
+            })();
+        }
+
+        loader.load(cfg.getUrl(), (tex) => {
+            if (layerMeshes[id]) {
+                layerMeshes[id].material.map = tex;
+                layerMeshes[id].material.opacity = cfg.opacity;
+                layerMeshes[id].material.needsUpdate = true;
             }
         });
-        globe.customLayerData(activeLayers);
+    }
+
+    function syncAllLayers() {
+        if (!globe || !globeReady) return;
+        Object.keys(GLOBE_LAYERS).forEach(id => {
+            const cb = document.getElementById('earth_layer_' + id);
+            if (!cb) return;
+            if (cb.checked) {
+                if (layerMeshes[id]) {
+                    if (!globe.scene().children.includes(layerMeshes[id])) {
+                        globe.scene().add(layerMeshes[id]);
+                    }
+                } else {
+                    _buildMesh(id);
+                }
+            } else {
+                if (layerMeshes[id]) {
+                    globe.scene().remove(layerMeshes[id]);
+                }
+            }
+        });
     }
 
     // -------------------------------------------------------------------
@@ -77,35 +130,22 @@ window.EarthView = (function() {
             .pointLat(d => parseFloat(d.lat))
             .pointLng(d => parseFloat(d.lon))
             .pointAltitude(0)
-            .pointRadius(d => d.t === 1 ? 0.04 : 0.02)
-            .pointColor(d => d.t === 1 ? '#00f0ff' : '#007acc')
+            .pointRadius(d => d.t === 1 ? 0.05 : 0.025)
+            .pointColor(d => d.t === 1 ? '#ff3333' : '#ff9900')
             .pointResolution(32)
+            .ringsData([]) // Will be populated when data loads
+            .ringLat(d => parseFloat(d.lat))
+            .ringLng(d => parseFloat(d.lon))
+            .ringColor(d => d.t === 1 ? '#ff3333' : '#ff9900')
+            .ringMaxRadius(d => d.t === 1 ? 1.5 : 0.5)
+            .ringPropagationSpeed(1)
+            .ringRepeatPeriod(1500)
             .pointLabel(d => `
                 <div style="background:rgba(7,17,29,0.92);padding:8px 12px;border-radius:8px;border:1px solid rgba(0,240,255,0.3);font-family:'Inter',sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.6);">
                     <div style="color:#fff;font-weight:700;font-size:14px;margin-bottom:3px;">${d.i}</div>
                     <div style="color:#a0aec0;font-size:12px;">${d.n}</div>
                 </div>
             `)
-            .customLayerData([])
-            .customThreeObject(d => {
-                const mesh = new THREE.Mesh(
-                    new THREE.SphereGeometry(globe.getGlobeRadius() * d.altFactor, 72, 72),
-                    new THREE.MeshBasicMaterial({ transparent: true, opacity: d.opacity, blending: THREE[d.blending] || THREE.AdditiveBlending, depthWrite: false, side: THREE.FrontSide })
-                );
-                const loader = new THREE.TextureLoader();
-                loader.crossOrigin = 'anonymous';
-                loader.load(d.getUrl(), tex => {
-                    mesh.material.map = tex;
-                    mesh.material.needsUpdate = true;
-                });
-                return mesh;
-            })
-            .customThreeObjectUpdate((obj, d) => {
-                if (d.rotate) {
-                    Object.assign(obj.__data, { rotationY: (obj.__data.rotationY || 0) + 0.0005 });
-                    obj.rotation.y = -obj.__data.rotationY;
-                }
-            })
             .onPointClick(point => {
                 const ap = {
                     icao: point.i,
@@ -172,6 +212,7 @@ window.EarthView = (function() {
             const data = await res.json();
             airportsData = data.filter(a => a.t === 1 || a.t === 2);
             globe.pointsData(airportsData);
+            globe.ringsData(airportsData);
         } catch (e) {
             console.error('[EarthView] Failed to load airports:', e);
         }
@@ -235,9 +276,9 @@ window.EarthView = (function() {
 
     const flyTo = (lat, lon) => {
         if (!globe) return;
-        // The altitude 0.5 is somewhat zoomed in, you can adjust as needed. 
+        // The altitude 0.15 is much closer to the ground
         // transition time is 1500ms
-        globe.pointOfView({ lat: lat, lng: lon, altitude: 0.5 }, 1500);
+        globe.pointOfView({ lat: lat, lng: lon, altitude: 0.15 }, 1500);
     };
 
     return { init, show, hide, flyTo };
