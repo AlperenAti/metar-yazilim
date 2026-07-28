@@ -260,8 +260,8 @@ window.EarthView = (function() {
             
             globe
                 .polygonCapColor(() => 'rgba(0, 0, 0, 0)')
-                .polygonSideColor(() => 'rgba(255, 255, 255, 0.05)')
-                .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.3)')
+                .polygonSideColor(() => 'rgba(255, 255, 255, 0.02)')
+                .polygonStrokeColor(() => 'rgba(0, 0, 0, 0.6)') // Dark borders for visibility over deserts
                 .polygonAltitude(0.003)
                 .labelLat(d => d.properties.label_lat)
                 .labelLng(d => d.properties.label_lon)
