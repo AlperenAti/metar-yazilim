@@ -9,6 +9,55 @@
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>', subdomains: 'abcd', maxZoom: 20
     });
     darkLayer.addTo(map);
+    // --- Coordinates & Elevation Control ---
+    const CoordControl = L.Control.extend({
+        options: { position: 'bottomright' },
+        onAdd: function () {
+            const container = L.DomUtil.create('div', 'map-coordinates-control');
+            container.innerHTML = `
+                <div>LAT: <span class="val" id="coord-lat">--.----</span></div>
+                <div>LON: <span class="val" id="coord-lon">--.----</span></div>
+                <div>ELEV: <span class="val" id="coord-elev">---</span> m</div>
+            `;
+            return container;
+        }
+    });
+    map.addControl(new CoordControl());
+
+    let elevTimeout = null;
+    let lastElevCache = {}; // Cache to avoid duplicate requests for nearby points
+    
+    map.on('mousemove', (e) => {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        document.getElementById('coord-lat').textContent = lat.toFixed(4);
+        document.getElementById('coord-lon').textContent = lng.toFixed(4);
+        
+        // Debounce elevation API call (300ms)
+        if (elevTimeout) clearTimeout(elevTimeout);
+        
+        const cacheKey = `${lat.toFixed(1)},${lng.toFixed(1)}`; // Roughly 10km grid cache
+        
+        if (lastElevCache[cacheKey] !== undefined) {
+            document.getElementById('coord-elev').textContent = lastElevCache[cacheKey];
+        } else {
+            document.getElementById('coord-elev').textContent = '...';
+            elevTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`);
+                    const data = await res.json();
+                    if (data && data.elevation && data.elevation.length > 0) {
+                        const elev = Math.round(data.elevation[0]);
+                        lastElevCache[cacheKey] = elev;
+                        document.getElementById('coord-elev').textContent = elev;
+                    }
+                } catch (err) {
+                    document.getElementById('coord-elev').textContent = 'N/A';
+                }
+            }, 300);
+        }
+    });
 
     // Weather Layer Click Logic
     map.on('click', async (e) => {

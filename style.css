@@ -1003,3 +1003,24 @@ body.earth-active .map-weather-controls { display: none !important; }
     font-weight: 500;
     color: #cbd5e1;
 }
+
+/* Map Coordinates Control */
+.map-coordinates-control {
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(4px);
+    color: #94a3b8;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    gap: 8px;
+    pointer-events: none;
+    margin-bottom: 2px;
+}
+.map-coordinates-control span.val {
+    color: #e2e8f0;
+    font-family: 'DM Mono', monospace;
+}
