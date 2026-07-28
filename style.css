@@ -164,7 +164,7 @@ button { color: inherit; }
 /* Weather Playback UI */
 .weather-playback-container {
     position: absolute;
-    bottom: 24px;
+    bottom: 105px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
