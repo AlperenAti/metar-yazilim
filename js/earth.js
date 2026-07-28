@@ -6,6 +6,7 @@ window.EarthView = (function() {
     let layerMeshes = {}; // id -> THREE.Mesh
     let pendingLayers = []; // layers requested before globe was ready
     let countriesData = [];
+    let nightMesh = null;
 
     // -------------------------------------------------------------------
     // Layer Definitions — NASA GIBS equirectangular WMS
@@ -216,6 +217,19 @@ window.EarthView = (function() {
                             }
                         }
                         
+                        if (nightMesh) {
+                            let sDir;
+                            if (typeof globe.getCoords === 'function') {
+                                const s = globe.getCoords(decl, solarLng, 5);
+                                sDir = new THREE.Vector3(s.x, s.y, s.z).normalize();
+                            } else {
+                                const phi = (90 - decl) * (Math.PI / 180);
+                                const theta = (solarLng + 90) * (Math.PI / 180);
+                                sDir = new THREE.Vector3(1000 * Math.sin(phi) * Math.cos(theta), 1000 * Math.cos(phi), 1000 * Math.sin(phi) * Math.sin(theta)).normalize();
+                            }
+                            nightMesh.material.uniforms.sunPos.value.copy(sDir);
+                        }
+
                         const aLight = globe.scene().children.find(o => o.type === 'AmbientLight');
                         if (aLight) { aLight.intensity = 0.15; }
                     };
@@ -275,6 +289,48 @@ window.EarthView = (function() {
             syncBorders();
         } catch (e) {
             console.error('[EarthView] Failed to load borders:', e);
+        }
+
+        // Night Lights Custom Layer
+        if (window.THREE) {
+            nightMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(100.1, 64, 64),
+                new THREE.ShaderMaterial({
+                    uniforms: {
+                        nightTex: { value: new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/earth-night.jpg') },
+                        sunPos: { value: new THREE.Vector3(1, 0, 0) }
+                    },
+                    vertexShader: `
+                        varying vec2 vUv;
+                        varying vec3 vWorldPosition;
+                        void main() {
+                            vUv = uv;
+                            vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                            vWorldPosition = worldPosition.xyz;
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform sampler2D nightTex;
+                        uniform vec3 sunPos;
+                        varying vec2 vUv;
+                        varying vec3 vWorldPosition;
+                        void main() {
+                            vec4 nightColor = texture2D(nightTex, vUv);
+                            vec3 viewDir = normalize(vWorldPosition);
+                            vec3 sunDir = normalize(sunPos);
+                            float intensity = dot(viewDir, sunDir);
+                            // Smooth blend across terminator.
+                            float blend = smoothstep(0.0, -0.2, intensity);
+                            gl_FragColor = vec4(nightColor.rgb, nightColor.a * blend * 0.95);
+                        }
+                    `,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                })
+            );
+            globe.customLayerData([nightMesh]).customThreeObject(d => d);
         }
 
         // Borders toggle
