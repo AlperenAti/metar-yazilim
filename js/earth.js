@@ -186,16 +186,36 @@ window.EarthView = (function() {
                         const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
                         const decl = -23.44 * Math.cos((2 * Math.PI / 365) * (dayOfYear + 10));
                         const utcH = now.getUTCHours() + now.getUTCMinutes() / 60;
-                        const solarLng = 180 - utcH * 15;
-                        const phi   = (90 - decl) * (Math.PI / 180);
-                        const theta = (solarLng + 180) * (Math.PI / 180);
-                        const R = 1000;
-                        const x = -R * Math.sin(phi) * Math.cos(theta);
-                        const z =  R * Math.sin(phi) * Math.sin(theta);
-                        const y =  R * Math.cos(phi);
+                        
+                        // Time calculation:
+                        // At UTC 12:00, the sun is at Longitude 0.
+                        // At UTC 00:00, the sun is at Longitude 180 / -180.
+                        let solarLng = 180 - (utcH * 15);
+                        if (solarLng > 180) solarLng -= 360;
+                        if (solarLng < -180) solarLng += 360;
 
-                        const dLight = globe.scene().children.find(o => o.type === 'DirectionalLight');
-                        if (dLight) { dLight.position.set(x, y, z); dLight.intensity = 1.2; }
+                        if (typeof globe.getCoords === 'function') {
+                            const sunPos = globe.getCoords(decl, solarLng, 5); // Altitude 5 (far away)
+                            const dLight = globe.scene().children.find(o => o.type === 'DirectionalLight');
+                            if (dLight) { 
+                                dLight.position.set(sunPos.x, sunPos.y, sunPos.z); 
+                                dLight.intensity = 1.2; 
+                            }
+                        } else {
+                            // Fallback manual spherical coordinates
+                            const phi = (90 - decl) * (Math.PI / 180);
+                            const theta = (solarLng + 90) * (Math.PI / 180); // +90 aligns correctly in ThreeGlobe
+                            const R = 1000;
+                            const x = R * Math.sin(phi) * Math.cos(theta);
+                            const z = R * Math.sin(phi) * Math.sin(theta);
+                            const y = R * Math.cos(phi);
+                            const dLight = globe.scene().children.find(o => o.type === 'DirectionalLight');
+                            if (dLight) { 
+                                dLight.position.set(x, y, z); 
+                                dLight.intensity = 1.2; 
+                            }
+                        }
+                        
                         const aLight = globe.scene().children.find(o => o.type === 'AmbientLight');
                         if (aLight) { aLight.intensity = 0.15; }
                     };
@@ -241,14 +261,15 @@ window.EarthView = (function() {
             globe
                 .polygonCapColor(() => 'rgba(0, 0, 0, 0)')
                 .polygonSideColor(() => 'rgba(255, 255, 255, 0.05)')
-                .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.2)')
+                .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.3)')
                 .polygonAltitude(0.003)
                 .labelLat(d => d.properties.label_lat)
                 .labelLng(d => d.properties.label_lon)
                 .labelText(d => d.properties.NAME_TR || d.properties.NAME)
-                .labelSize(1.2)
+                .labelSize(d => d.properties.LABELRANK < 4 ? 1.0 : (d.properties.LABELRANK < 6 ? 0.8 : 0)) // Hide labels for very small countries to prevent clutter
+                .labelAltitude(0.005) // Ensure labels float ABOVE the polygons!
                 .labelDotRadius(0)
-                .labelColor(() => 'rgba(255, 255, 255, 0.75)')
+                .labelColor(() => 'rgba(255, 255, 255, 0.9)')
                 .labelResolution(2);
                 
             syncBorders();
