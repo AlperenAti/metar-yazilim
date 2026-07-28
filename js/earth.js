@@ -266,11 +266,11 @@ window.EarthView = (function() {
                 .labelLat(d => d.properties.label_lat)
                 .labelLng(d => d.properties.label_lon)
                 .labelText(d => d.properties.NAME_TR || d.properties.NAME)
-                .labelSize(d => d.properties.LABELRANK < 4 ? 1.0 : (d.properties.LABELRANK < 6 ? 0.8 : 0)) // Hide labels for very small countries to prevent clutter
-                .labelAltitude(0.005) // Ensure labels float ABOVE the polygons!
+                .labelSize(d => d.properties.LABELRANK < 4 ? 0.6 : (d.properties.LABELRANK < 6 ? 0.4 : 0)) // Reduced label size
+                .labelAltitude(0.005) // Ensure labels float ABOVE the polygons
                 .labelDotRadius(0)
-                .labelColor(() => 'rgba(255, 255, 255, 0.9)')
-                .labelResolution(2);
+                .labelColor(() => 'rgba(255, 255, 255, 0.8)')
+                .labelResolution(3);
                 
             syncBorders();
         } catch (e) {
