@@ -20,8 +20,8 @@ window.EarthView = (function() {
         clouds: {
             getUrl: () => 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png',
             altFactor: 1.004,
-            opacity: 1.0,
-            blending: 'AdditiveBlending', 
+            opacity: 0.95, // Slightly below 1 to look somewhat realistic, but mostly opaque
+            blending: 'NormalBlending', // Use Normal to completely cover terrain
             rotate: false
         }
     };
@@ -72,7 +72,7 @@ window.EarthView = (function() {
             cfg.getUrl(),
             (tex) => {
                 if (layerMeshes[id]) {
-                    layerMeshes[id].material.map = tex;
+                    layerMeshes[id].material.alphaMap = tex; // Use alphaMap to create solid white clouds from black-and-white image
                     layerMeshes[id].material.opacity = cfg.opacity;
                     layerMeshes[id].material.needsUpdate = true;
                 }
