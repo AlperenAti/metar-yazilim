@@ -294,7 +294,7 @@ window.EarthView = (function() {
         // Night Lights Custom Layer
         if (window.THREE) {
             nightMesh = new THREE.Mesh(
-                new THREE.SphereGeometry(100.1, 64, 64),
+                new THREE.SphereGeometry(100.2, 75, 75), // Exact match to globe segments, slightly larger
                 new THREE.ShaderMaterial({
                     uniforms: {
                         nightTex: { value: new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/earth-night.jpg') },
@@ -317,20 +317,27 @@ window.EarthView = (function() {
                         varying vec3 vWorldPosition;
                         void main() {
                             vec4 nightColor = texture2D(nightTex, vUv);
+                            
+                            // Boost contrast to eliminate the dark blue background
+                            nightColor.rgb = pow(nightColor.rgb, vec3(2.5));
+                            
                             vec3 viewDir = normalize(vWorldPosition);
                             vec3 sunDir = normalize(sunPos);
                             float intensity = dot(viewDir, sunDir);
+                            
                             // Smooth blend across terminator.
                             float blend = smoothstep(0.0, -0.2, intensity);
-                            gl_FragColor = vec4(nightColor.rgb, nightColor.a * blend * 0.95);
+                            gl_FragColor = vec4(nightColor.rgb, blend);
                         }
                     `,
                     transparent: true,
                     blending: THREE.AdditiveBlending,
-                    depthWrite: false
+                    depthWrite: false,
+                    depthTest: true
                 })
             );
-            globe.customLayerData([nightMesh]).customThreeObject(d => d);
+            // Add directly to scene to prevent globe.gl from translating it to surface coordinates
+            globe.scene().add(nightMesh);
         }
 
         // Borders toggle
