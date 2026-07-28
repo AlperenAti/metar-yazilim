@@ -5,6 +5,7 @@ window.EarthView = (function() {
     let airportsData = [];
     let layerMeshes = {}; // id -> THREE.Mesh
     let pendingLayers = []; // layers requested before globe was ready
+    let countriesData = [];
 
     // -------------------------------------------------------------------
     // Layer Definitions — NASA GIBS equirectangular WMS
@@ -113,6 +114,18 @@ window.EarthView = (function() {
         });
     }
 
+    function syncBorders() {
+        if (!globe) return;
+        const cb = document.getElementById('earth_layer_borders');
+        if (cb && cb.checked) {
+            globe.polygonsData(countriesData);
+            globe.labelsData(countriesData);
+        } else {
+            globe.polygonsData([]);
+            globe.labelsData([]);
+        }
+    }
+
     // -------------------------------------------------------------------
     // Init
     // -------------------------------------------------------------------
@@ -164,6 +177,7 @@ window.EarthView = (function() {
                 
                 // Initialize currently checked layers
                 syncAllLayers();
+                syncBorders();
 
                 // Real-time Day/Night lighting
                 if (window.THREE) {
@@ -218,18 +232,35 @@ window.EarthView = (function() {
             }
         });
 
-        // Globe Quality toggle
-        document.getElementsByName('globe_quality').forEach(radio => {
-            radio.addEventListener('change', e => {
-                const l = document.getElementById('earth-loading');
-                if (l) { l.style.display = 'flex'; l.style.opacity = '1'; }
-                globe.globeImageUrl(
-                    e.target.value === 'high'
-                        ? 'assets/earth_8k.jpg'
-                        : 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg'
-                );
-            });
-        });
+        // Load borders
+        try {
+            const res = await fetch('data/countries.geojson');
+            const data = await res.json();
+            countriesData = data.features;
+            
+            globe
+                .polygonCapColor(() => 'rgba(0, 0, 0, 0)')
+                .polygonSideColor(() => 'rgba(255, 255, 255, 0.05)')
+                .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.2)')
+                .polygonAltitude(0.003)
+                .labelLat(d => d.properties.label_lat)
+                .labelLng(d => d.properties.label_lon)
+                .labelText(d => d.properties.NAME_TR || d.properties.NAME)
+                .labelSize(1.2)
+                .labelDotRadius(0)
+                .labelColor(() => 'rgba(255, 255, 255, 0.75)')
+                .labelResolution(2);
+                
+            syncBorders();
+        } catch (e) {
+            console.error('[EarthView] Failed to load borders:', e);
+        }
+
+        // Borders toggle
+        const bordersCb = document.getElementById('earth_layer_borders');
+        if (bordersCb) {
+            bordersCb.addEventListener('change', syncBorders);
+        }
 
         // Weather layer checkboxes
         Object.keys(GLOBE_LAYERS).forEach(id => {
