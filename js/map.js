@@ -37,7 +37,7 @@
         // Debounce elevation API call (300ms)
         if (elevTimeout) clearTimeout(elevTimeout);
         
-        const cacheKey = `${lat.toFixed(1)},${lng.toFixed(1)}`; // Roughly 10km grid cache
+        const cacheKey = `${lat.toFixed(3)},${lng.toFixed(3)}`; // Roughly 111m grid cache
         
         if (lastElevCache[cacheKey] !== undefined) {
             document.getElementById('coord-elev').textContent = lastElevCache[cacheKey];
