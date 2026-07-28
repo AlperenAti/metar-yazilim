@@ -143,7 +143,7 @@ window.EarthView = (function() {
             .pointAltitude(0.002) // Flat disks slightly above the surface
             .pointRadius(d => d.t === 1 ? 0.05 : 0.025)
             .pointColor(d => d.t === 1 ? '#ff3333' : '#00f0ff')
-            .pointResolution(32)
+            .pointResolution(12) // Lowered from 32 to drastically improve WebGL performance on zoom
             .pointLabel(d => `
                 <div style="background:rgba(7,17,29,0.92);padding:8px 12px;border-radius:8px;border:1px solid rgba(0,240,255,0.3);font-family:'Inter',sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.6);">
                     <div style="color:#fff;font-weight:700;font-size:14px;margin-bottom:3px;">${d.i}</div>
