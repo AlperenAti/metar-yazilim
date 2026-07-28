@@ -923,6 +923,7 @@
         if (window.EarthView) window.EarthView.hide();
         
         if (view === 'map') {
+            document.body.classList.remove('hide-map-overlays');
             viewMapBtn.classList.add('active');
             fullDashboardView.classList.add('hidden');
             
@@ -933,6 +934,7 @@
                 window.MapManager.focusAirport(selectedAirport);
             }
         } else if (view === 'list') {
+            document.body.classList.add('hide-map-overlays');
             viewListBtn.classList.add('active');
             fullDashboardView.classList.remove('hidden');
             
@@ -947,6 +949,7 @@
                 dashboardContent.classList.add('hidden');
             }
         } else if (view === 'earth') {
+            document.body.classList.add('hide-map-overlays');
             if (viewEarthBtn) viewEarthBtn.classList.add('active');
             fullDashboardView.classList.add('hidden');
             mapContainer.style.display = 'none';

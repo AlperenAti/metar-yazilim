@@ -1024,3 +1024,10 @@ body.earth-active .map-weather-controls { display: none !important; }
     color: #e2e8f0;
     font-family: 'DM Mono', monospace;
 }
+
+/* Hide map-specific weather overlays when in List or Earth view */
+body.hide-map-overlays #weather-timestamp,
+body.hide-map-overlays #weather-legend-container,
+body.hide-map-overlays #weather-playback-container {
+    display: none !important;
+}
