@@ -137,11 +137,10 @@ window.EarthView = (function() {
 
         globe = Globe()(container)
             .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-            .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
             .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
             .pointLat(d => parseFloat(d.lat))
             .pointLng(d => parseFloat(d.lon))
-            .pointAltitude(0.02) // Raised higher to clear bump map displacements (e.g. Greenland mountains) so clicks register
+            .pointAltitude(0.002) // Flat disks slightly above the surface
             .pointRadius(d => d.t === 1 ? 0.05 : 0.025)
             .pointColor(d => d.t === 1 ? '#ff3333' : '#00f0ff')
             .pointResolution(32)
@@ -262,12 +261,12 @@ window.EarthView = (function() {
                 .polygonCapColor(() => 'rgba(0, 0, 0, 0)')
                 .polygonSideColor(() => 'rgba(255, 255, 255, 0.02)')
                 .polygonStrokeColor(() => 'rgba(255, 230, 0, 0.85)') // Bright visible yellow (Google Earth style)
-                .polygonAltitude(0.003)
+                .polygonAltitude(0.001) // Just above the surface
                 .labelLat(d => d.properties.label_lat)
                 .labelLng(d => d.properties.label_lon)
                 .labelText(d => d.properties.NAME_TR || d.properties.NAME)
                 .labelSize(d => d.properties.LABELRANK < 4 ? 0.6 : (d.properties.LABELRANK < 6 ? 0.4 : 0)) // Reduced label size
-                .labelAltitude(0.005) // Ensure labels float ABOVE the polygons
+                .labelAltitude(0.003) // Ensure labels float ABOVE everything
                 .labelDotRadius(0)
                 .labelColor(() => 'rgba(255, 255, 255, 0.8)')
                 .labelResolution(3);
