@@ -6,7 +6,6 @@ window.EarthView = (function() {
     let layerMeshes = {}; // id -> THREE.Mesh
     let pendingLayers = []; // layers requested before globe was ready
     let countriesData = [];
-    let nightMesh = null;
 
     // -------------------------------------------------------------------
     // Layer Definitions — NASA GIBS equirectangular WMS
@@ -217,19 +216,6 @@ window.EarthView = (function() {
                             }
                         }
                         
-                        if (nightMesh) {
-                            let sDir;
-                            if (typeof globe.getCoords === 'function') {
-                                const s = globe.getCoords(decl, solarLng, 5);
-                                sDir = new THREE.Vector3(s.x, s.y, s.z).normalize();
-                            } else {
-                                const phi = (90 - decl) * (Math.PI / 180);
-                                const theta = (solarLng + 90) * (Math.PI / 180);
-                                sDir = new THREE.Vector3(1000 * Math.sin(phi) * Math.cos(theta), 1000 * Math.cos(phi), 1000 * Math.sin(phi) * Math.sin(theta)).normalize();
-                            }
-                            nightMesh.material.uniforms.sunPos.value.copy(sDir);
-                        }
-
                         const aLight = globe.scene().children.find(o => o.type === 'AmbientLight');
                         if (aLight) { aLight.intensity = 0.15; }
                     };
@@ -275,7 +261,7 @@ window.EarthView = (function() {
             globe
                 .polygonCapColor(() => 'rgba(0, 0, 0, 0)')
                 .polygonSideColor(() => 'rgba(255, 255, 255, 0.02)')
-                .polygonStrokeColor(() => 'rgba(0, 0, 0, 1.0)') // Solid black borders for maximum visibility
+                .polygonStrokeColor(() => 'rgba(255, 230, 0, 0.85)') // Bright visible yellow (Google Earth style)
                 .polygonAltitude(0.003)
                 .labelLat(d => d.properties.label_lat)
                 .labelLng(d => d.properties.label_lon)
@@ -289,55 +275,6 @@ window.EarthView = (function() {
             syncBorders();
         } catch (e) {
             console.error('[EarthView] Failed to load borders:', e);
-        }
-
-        // Night Lights Custom Layer
-        if (window.THREE) {
-            nightMesh = new THREE.Mesh(
-                new THREE.SphereGeometry(100.2, 75, 75), // Exact match to globe segments, slightly larger
-                new THREE.ShaderMaterial({
-                    uniforms: {
-                        nightTex: { value: new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/earth-night.jpg') },
-                        sunPos: { value: new THREE.Vector3(1, 0, 0) }
-                    },
-                    vertexShader: `
-                        varying vec2 vUv;
-                        varying vec3 vWorldPosition;
-                        void main() {
-                            vUv = uv;
-                            vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                            vWorldPosition = worldPosition.xyz;
-                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                        }
-                    `,
-                    fragmentShader: `
-                        uniform sampler2D nightTex;
-                        uniform vec3 sunPos;
-                        varying vec2 vUv;
-                        varying vec3 vWorldPosition;
-                        void main() {
-                            vec4 nightColor = texture2D(nightTex, vUv);
-                            
-                            // Subtract dark background noise and boost city lights brightness
-                            nightColor.rgb = max(vec3(0.0), nightColor.rgb - vec3(0.08)) * 2.5;
-                            
-                            vec3 viewDir = normalize(vWorldPosition);
-                            vec3 sunDir = normalize(sunPos);
-                            float intensity = dot(viewDir, sunDir);
-                            
-                            // Smooth blend across terminator.
-                            float blend = smoothstep(0.0, -0.2, intensity);
-                            gl_FragColor = vec4(nightColor.rgb, blend);
-                        }
-                    `,
-                    transparent: true,
-                    blending: THREE.AdditiveBlending,
-                    depthWrite: false,
-                    depthTest: true
-                })
-            );
-            // Add directly to scene to prevent globe.gl from translating it to surface coordinates
-            globe.scene().add(nightMesh);
         }
 
         // Borders toggle
