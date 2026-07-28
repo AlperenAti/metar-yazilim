@@ -275,7 +275,7 @@ window.EarthView = (function() {
             globe
                 .polygonCapColor(() => 'rgba(0, 0, 0, 0)')
                 .polygonSideColor(() => 'rgba(255, 255, 255, 0.02)')
-                .polygonStrokeColor(() => 'rgba(0, 0, 0, 0.6)') // Dark borders for visibility over deserts
+                .polygonStrokeColor(() => 'rgba(0, 0, 0, 1.0)') // Solid black borders for maximum visibility
                 .polygonAltitude(0.003)
                 .labelLat(d => d.properties.label_lat)
                 .labelLng(d => d.properties.label_lon)
@@ -318,8 +318,8 @@ window.EarthView = (function() {
                         void main() {
                             vec4 nightColor = texture2D(nightTex, vUv);
                             
-                            // Boost contrast to eliminate the dark blue background
-                            nightColor.rgb = pow(nightColor.rgb, vec3(2.5));
+                            // Subtract dark background noise and boost city lights brightness
+                            nightColor.rgb = max(vec3(0.0), nightColor.rgb - vec3(0.08)) * 2.5;
                             
                             vec3 viewDir = normalize(vWorldPosition);
                             vec3 sunDir = normalize(sunPos);
