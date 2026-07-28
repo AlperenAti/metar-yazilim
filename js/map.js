@@ -55,7 +55,7 @@
                 } catch (err) {
                     document.getElementById('coord-elev').textContent = 'N/A';
                 }
-            }, 300);
+            }, 500); // 500ms debounce to prevent Open-Meteo rate limits
         }
     });
 
