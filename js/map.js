@@ -84,7 +84,7 @@
         else if (activeLayer === 'radar') varName = 'precipitation';
 
         try {
-            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=${varName}`);
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=${varName}&wind_speed_unit=knots`);
             const data = await res.json();
             
             if (data && data.current && typeof data.current[varName] !== 'undefined') {
