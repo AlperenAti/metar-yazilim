@@ -328,10 +328,22 @@
     const iconPause = radarPlayBtn ? radarPlayBtn.querySelector('.icon-pause') : null;
 
     function showRadarFrame(idx) {
-        if (!radarFrames.length) return;
-        radarLayers.forEach((layer, i) => {
-            layer.setOpacity(i === idx ? 0.65 : 0);
+        if (!radarFrames.length || !currentWeatherLayer) return;
+        
+        const layer = radarLayers[idx];
+        if (!currentWeatherLayer.hasLayer(layer)) {
+            currentWeatherLayer.addLayer(layer);
+        }
+        
+        radarLayers.forEach((l, i) => {
+            l.setOpacity(i === idx ? 0.65 : 0);
         });
+        
+        const nextIdx = (idx + 1) % radarFrames.length;
+        const nextLayer = radarLayers[nextIdx];
+        if (!currentWeatherLayer.hasLayer(nextLayer)) {
+            currentWeatherLayer.addLayer(nextLayer);
+        }
         const d = new Date(radarFrames[idx].time * 1000);
         if (radarTimeLabel) {
             radarTimeLabel.textContent = `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')} Z`;
@@ -455,7 +467,6 @@
                     const layer = L.tileLayer(`${data.host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`, {
                         opacity: 0, maxZoom: 18, maxNativeZoom: 7, attribution: '© RainViewer', className: 'weather-radar-layer'
                     });
-                    currentWeatherLayer.addLayer(layer);
                     radarLayers.push(layer);
                 });
                 
