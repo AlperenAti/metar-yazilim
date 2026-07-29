@@ -142,6 +142,8 @@
         marker.on('add', () => {
             const el = marker.getElement();
             if (!el) return;
+            L.DomEvent.disableClickPropagation(el);
+            
             const btn = el.querySelector('.measure-delete');
             if (btn) {
                 btn.addEventListener('click', (e) => {
@@ -205,6 +207,8 @@
         marker.on('add', () => {
             const el = marker.getElement();
             if (!el) return;
+            L.DomEvent.disableClickPropagation(el);
+            
             const btn = el.querySelector('.measure-delete');
             if (btn) btn.addEventListener('click', (e) => { e.stopPropagation(); onDelete(); });
         });

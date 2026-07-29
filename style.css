@@ -1491,21 +1491,27 @@ body.hide-map-overlays #weather-playback-container {
 .measure-point-wrapper, .measure-total-wrapper {
     background: none !important;
     border: none !important;
+    overflow: visible !important;
 }
 
 .measure-point {
-    position: relative;
-    display: flex; align-items: center; gap: 6px;
-    top: -8px; left: 8px; /* Offset from exact latlng */
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: auto;
 }
 
 .measure-dot {
+    position: absolute;
     width: 8px; height: 8px;
     border-radius: 50%;
-    flex-shrink: 0;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
 }
 
 .measure-label {
+    position: absolute;
+    top: 0; left: 12px;
+    transform: translateY(-50%);
     background: var(--surface-strong);
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -1519,25 +1525,28 @@ body.hide-map-overlays #weather-playback-container {
 }
 
 .measure-delete {
+    position: absolute;
+    top: 0; right: 12px; /* place to the left of the dot */
+    transform: translateY(-50%) scale(0.8);
     display: flex; align-items: center; justify-content: center;
     width: 18px; height: 18px;
     background: #ff6d74; color: white;
     border: none; border-radius: 50%;
     font-size: 14px; line-height: 1;
     cursor: pointer;
-    opacity: 0; transform: scale(0.8);
+    opacity: 0; 
     transition: .15s ease;
     box-shadow: 0 2px 8px rgba(255,109,116,0.4);
     pointer-events: auto;
 }
 
 .measure-point:hover .measure-delete {
-    opacity: 1; transform: scale(1);
+    opacity: 1; transform: translateY(-50%) scale(1);
 }
 
 .measure-delete:hover {
     background: #e93b45;
-    transform: scale(1.1);
+    transform: translateY(-50%) scale(1.1);
 }
 
 .measure-total-label {
