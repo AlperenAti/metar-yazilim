@@ -371,8 +371,43 @@
         });
         
         document.getElementById('rp-detailed-btn').addEventListener('click', () => {
-            alert("Detailed Route Briefing Dashboard is coming soon!");
+            const btn = document.getElementById('view-list-btn');
+            if (btn) btn.click();
+            const dashRouteTab = document.getElementById('dash-tab-route');
+            if (dashRouteTab) dashRouteTab.click();
+            
+            // Auto fill the dashboard form and calculate
+            document.getElementById('rp-dash-dep').value = dep.icao;
+            document.getElementById('rp-dash-arr').value = arr.icao;
+            document.getElementById('rp-dash-fl').value = document.getElementById('rp-fl')?.value || `FL${DEFAULT_FL}`;
+            document.getElementById('rp-dash-waypoints').value = document.getElementById('rp-waypoints')?.value || '';
+            document.getElementById('rp-dash-calc-btn').click();
+            
+            panel.remove();
+            if(document.getElementById('route-planner-modal')) {
+                document.getElementById('route-planner-modal').style.display = 'none';
+            }
         });
+    }
+
+    function renderDashboardCards(dep, arr, routeData, wxData, sigmetAlerts) {
+        document.getElementById('route-dash-empty-state').classList.add('hidden');
+        document.getElementById('route-dash-content').classList.remove('hidden');
+        
+        document.getElementById('route-dash-title-val').textContent = `${dep.icao} → ${arr.icao}`;
+        document.getElementById('route-dash-dist-val').textContent = `${routeData.totalNm.toLocaleString()} NM`;
+        
+        const grid = document.getElementById('route-dash-cards-grid');
+        grid.innerHTML = wxData.map(({ pt, wx }) => renderPointCard(pt, wx)).join('');
+        
+        // Render sigmets alert as a card if any
+        if (sigmetAlerts.length > 0) {
+            const sigHtml = `<div class="rp-card" style="border-color:#e67e22; background:rgba(230,126,34,0.1);">
+                <div class="rp-card-header" style="color:#e67e22;">⚠️ SIGMET Alert</div>
+                <p style="padding:12px;font-size:13px;color:#fff;"><b>${sigmetAlerts.length} SIGMET${sigmetAlerts.length > 1 ? 's' : ''}</b> active along this route.</p>
+            </div>`;
+            grid.insertAdjacentHTML('afterbegin', sigHtml);
+        }
     }
 
     function showModal() {
@@ -459,17 +494,21 @@
             });
         });
 
-        document.getElementById('rp-calc-btn').addEventListener('click', () => runCalculation(modal));
+        document.getElementById('rp-calc-btn').addEventListener('click', () => {
+            const dep = document.getElementById('rp-dep').value.trim().toUpperCase();
+            const arr = document.getElementById('rp-arr').value.trim().toUpperCase();
+            const fl = parseInt(document.getElementById('rp-fl').value.replace(/\D/g, '')) || DEFAULT_FL;
+            const wp = document.getElementById('rp-waypoints').value.trim();
+            runCalculation(dep, arr, fl, wp, 'modal', modal);
+        });
     }
 
-    async function runCalculation(modal) {
-        const btn    = document.getElementById('rp-calc-btn');
-        const status = document.getElementById('rp-status');
-        const depRaw = document.getElementById('rp-dep').value.trim().toUpperCase();
-        const arrRaw = document.getElementById('rp-arr').value.trim().toUpperCase();
-        const flStr  = document.getElementById('rp-fl').value;
-        const fl     = parseInt(flStr.replace(/\D/g, '')) || DEFAULT_FL;
-        const wpRaw  = document.getElementById('rp-waypoints').value.trim();
+    async function runCalculation(depRaw, arrRaw, fl, wpRaw, mode, modal = null) {
+        const isDash = mode === 'dashboard';
+        const btnId  = isDash ? 'rp-dash-calc-btn' : 'rp-calc-btn';
+        const statId = isDash ? 'rp-dash-status' : 'rp-status';
+        const btn    = document.getElementById(btnId);
+        const status = document.getElementById(statId);
 
         if (!depRaw || depRaw.length !== 4) { status.textContent = '⚠ Enter a valid 4-letter departure ICAO.'; return; }
         if (!arrRaw || arrRaw.length !== 4) { status.textContent = '⚠ Enter a valid 4-letter arrival ICAO.'; return; }
@@ -517,17 +556,19 @@
             const map = window.MapManager?.map;
             if (map) drawRoute(dep, arr, points, map);
 
-            // 7. Show briefing panel
-            showBriefingPanel(dep, arr, { totalNm }, wxData, sigmetAlerts);
-
-            // Close modal
-            modal.remove();
+            // 7. Render UI based on mode
+            if (isDash) {
+                renderDashboardCards(dep, arr, { totalNm }, wxData, sigmetAlerts);
+            } else {
+                showBriefingPanel(dep, arr, { totalNm }, wxData, sigmetAlerts);
+                if (modal) modal.remove();
+            }
 
         } catch (err) {
             status.textContent = `❌ Error: ${err.message}`;
         } finally {
             btn.disabled = false;
-            btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 17l6-6 4 4 8-8"/></svg> Calculate Route`;
+            btn.innerHTML = isDash ? 'Calculate Route' : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 17l6-6 4 4 8-8"/></svg> Calculate Route`;
         }
     }
 
@@ -564,6 +605,43 @@
         document.querySelector('main').appendChild(toolPanel);
 
         document.getElementById('route-planner-btn').addEventListener('click', showModal);
+
+        // Dashboard Bindings
+        const dashBtn = document.getElementById('rp-dash-calc-btn');
+        if (dashBtn) {
+            dashBtn.addEventListener('click', () => {
+                const dep = document.getElementById('rp-dash-dep').value.trim().toUpperCase();
+                const arr = document.getElementById('rp-dash-arr').value.trim().toUpperCase();
+                const flStr = document.getElementById('rp-dash-fl').value;
+                const fl = parseInt(flStr.replace(/\D/g, '')) || DEFAULT_FL;
+                const wp = document.getElementById('rp-dash-waypoints').value.trim();
+                runCalculation(dep, arr, fl, wp, 'dashboard');
+            });
+            
+            document.getElementById('route-dash-close-btn').addEventListener('click', () => {
+                document.getElementById('route-dash-content').classList.add('hidden');
+                document.getElementById('route-dash-empty-state').classList.remove('hidden');
+                clearRouteLayer();
+            });
+            
+            ['rp-dash-dep','rp-dash-arr','rp-dash-waypoints'].forEach(id => {
+                document.getElementById(id).addEventListener('input', e => {
+                    const s = e.target.selectionStart;
+                    e.target.value = e.target.value.toUpperCase();
+                    e.target.setSelectionRange(s, s);
+                });
+            });
+            
+            const flDashInput = document.getElementById('rp-dash-fl');
+            flDashInput.addEventListener('input', e => {
+                let val = e.target.value.replace(/\D/g, '');
+                if (val) e.target.value = 'FL' + val;
+                else e.target.value = '';
+            });
+            flDashInput.addEventListener('focus', e => {
+                if(!e.target.value) e.target.value = 'FL';
+            });
+        }
     }
 
     if (document.readyState === 'loading') {

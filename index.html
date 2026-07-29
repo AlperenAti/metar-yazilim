@@ -277,7 +277,17 @@
 
 
         <div id="full-dashboard-view" class="full-dashboard-view hidden">
-            <!-- Empty state -->
+            <!-- Dashboard Mode Toggle -->
+            <div class="dash-mode-tabs">
+                <button id="dash-tab-airport" class="dash-mode-tab active" type="button">Airport Weather</button>
+                <button id="dash-tab-route" class="dash-mode-tab" type="button">Route Briefing</button>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- AIRPORT MODE -->
+            <!-- ============================================== -->
+            <div id="dash-mode-airport-wrapper" class="dash-mode-wrapper active">
+                <!-- Empty state -->
             <div id="dashboard-empty-state" class="dashboard-empty-state">
                 <div class="dashboard-search-hero">
                     <h2>Airport Weather Dashboard</h2>
@@ -396,7 +406,54 @@
                         <!-- Populated by JS -->
                     </div>
                     <code id="dash-raw-taf-text" style="display:block; margin-top:16px; color:#99c2ff; font-family:'DM Mono', monospace;"></code>
+                    </div>
                 </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- ROUTE MODE -->
+            <!-- ============================================== -->
+            <div id="dash-mode-route-wrapper" class="dash-mode-wrapper hidden">
+                
+                <!-- Route Empty State -->
+                <div id="route-dash-empty-state" class="dashboard-empty-state">
+                    <div class="dashboard-search-hero">
+                        <h2>Route Weather Briefing</h2>
+                        <p>Calculate great-circle flights, fetch upper-air winds, METAR/TAF, and check SIGMET intersections.</p>
+                        
+                        <div class="rp-dash-form">
+                            <div class="rp-dash-row">
+                                <input id="rp-dash-dep" type="text" maxlength="4" placeholder="DEP (e.g. LTFM)" autocomplete="off" spellcheck="false" class="rp-dash-input">
+                                <span>→</span>
+                                <input id="rp-dash-arr" type="text" maxlength="4" placeholder="ARR (e.g. EGLL)" autocomplete="off" spellcheck="false" class="rp-dash-input">
+                            </div>
+                            <div class="rp-dash-row">
+                                <input id="rp-dash-fl" type="text" placeholder="Ex: FL350" value="FL350" class="rp-dash-input">
+                                <input id="rp-dash-waypoints" type="text" placeholder="Waypoints (e.g. LYBE, LOWW)" autocomplete="off" spellcheck="false" class="rp-dash-input" style="flex:1;">
+                            </div>
+                            <div class="rp-dash-row" style="justify-content: center; margin-top: 10px;">
+                                <button id="rp-dash-calc-btn" type="button" class="btn-primary" style="width:200px;">Calculate Route</button>
+                            </div>
+                            <div id="rp-dash-status" class="rp-status" style="margin-top: 10px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Route Populated State -->
+                <div id="route-dash-content" class="dashboard-content hidden">
+                    <div class="dash-header-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 class="dash-title">ROUTE &nbsp;<span id="route-dash-title-val" style="color:var(--brand);font-family:'DM Mono',monospace;"></span></h2>
+                        <div class="dash-time">
+                            <span id="route-dash-dist-val" style="font-family:'DM Mono',monospace;"></span>
+                            <button id="route-dash-close-btn" class="icon-btn" aria-label="Close Route" style="background:none; border:none; color:var(--brand); font-size:24px; cursor:pointer; margin-left:12px; line-height:1;">×</button>
+                        </div>
+                    </div>
+                    
+                    <div id="route-dash-cards-grid" class="route-dash-cards-grid">
+                        <!-- Rendered via JS -->
+                    </div>
+                </div>
+
             </div>
         </div>
 

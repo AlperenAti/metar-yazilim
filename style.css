@@ -1581,3 +1581,84 @@ body.hide-map-overlays #weather-playback-container {
 .measure-hint.hidden {
     opacity: 0; transform: translate(-50%, 10px);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ROUTE DASHBOARD (Phase 3)
+═══════════════════════════════════════════════════════════════════ */
+
+.dash-mode-tabs {
+    display: flex; gap: 4px;
+    background: var(--surface-strong);
+    padding: 6px;
+    border-radius: 12px;
+    margin: 20px auto 30px;
+    width: fit-content;
+    box-shadow: 0 4px 16px var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.dash-mode-tab {
+    background: transparent;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.dash-mode-tab:hover { color: var(--ink); }
+
+.dash-mode-tab.active {
+    background: var(--brand);
+    color: #04241f;
+    box-shadow: 0 2px 8px var(--brand-dim);
+}
+
+.dash-mode-wrapper {
+    display: none;
+    width: 100%;
+}
+.dash-mode-wrapper.active {
+    display: block;
+}
+
+.rp-dash-form {
+    display: flex; flex-direction: column; gap: 12px;
+    background: var(--surface-strong);
+    padding: 24px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    max-width: 500px; margin: 30px auto 0;
+    box-shadow: 0 12px 32px var(--shadow);
+}
+
+.rp-dash-row {
+    display: flex; gap: 12px; align-items: center;
+}
+
+.rp-dash-input {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    padding: 12px 16px;
+    border-radius: 10px;
+    color: var(--ink);
+    font-size: 14px;
+    font-family: 'DM Mono', monospace;
+    transition: .15s;
+    min-width: 0;
+}
+.rp-dash-input:focus {
+    outline: none;
+    border-color: var(--brand);
+    background: rgba(255,255,255,0.08);
+}
+
+.route-dash-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    padding-bottom: 60px;
+}

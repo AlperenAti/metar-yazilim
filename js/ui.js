@@ -984,8 +984,38 @@
         
         if (viewMapBtn && viewListBtn) {
             viewMapBtn.addEventListener('click', () => switchView('map'));
-            viewListBtn.addEventListener('click', () => switchView('list', true));
-            if (viewEarthBtn) viewEarthBtn.addEventListener('click', () => switchView('earth')); // Forces empty state
+            viewListBtn.addEventListener('click', () => {
+                // Ensure airport tab is active when clicking dashboard from nav
+                const aptTab = $('dash-tab-airport');
+                if (aptTab) aptTab.click();
+                switchView('list', true);
+            });
+            if (viewEarthBtn) viewEarthBtn.addEventListener('click', () => switchView('earth'));
+        }
+
+        // Dashboard Mode Tabs (Airport vs Route)
+        const dashTabAirport = $('dash-tab-airport');
+        const dashTabRoute = $('dash-tab-route');
+        const dashModeAirportWrapper = $('dash-mode-airport-wrapper');
+        const dashModeRouteWrapper = $('dash-mode-route-wrapper');
+
+        if (dashTabAirport && dashTabRoute) {
+            dashTabAirport.addEventListener('click', () => {
+                dashTabAirport.classList.add('active');
+                dashTabRoute.classList.remove('active');
+                dashModeAirportWrapper.classList.add('active');
+                dashModeAirportWrapper.classList.remove('hidden');
+                dashModeRouteWrapper.classList.remove('active');
+                dashModeRouteWrapper.classList.add('hidden');
+            });
+            dashTabRoute.addEventListener('click', () => {
+                dashTabRoute.classList.add('active');
+                dashTabAirport.classList.remove('active');
+                dashModeRouteWrapper.classList.add('active');
+                dashModeRouteWrapper.classList.remove('hidden');
+                dashModeAirportWrapper.classList.remove('active');
+                dashModeAirportWrapper.classList.add('hidden');
+            });
         }
         
         // Unit Settings
