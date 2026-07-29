@@ -82,6 +82,22 @@
                     <label class="radio-row"><input type="radio" name="weather_layer" value="wind"><span>Wind Speed Heatmap</span></label>
                     <label class="radio-row"><input type="radio" name="weather_layer" value="pressure"><span>Sea Level Pressure</span></label>
                     <label class="radio-row"><input type="radio" name="weather_layer" value="wind_grid"><span>Wind Grid (Particles)</span></label>
+                    <label class="radio-row"><input type="radio" name="weather_layer" value="upper_temp"><span>Upper Air Temp (Heatmap)</span></label>
+                    <label class="radio-row"><input type="radio" name="weather_layer" value="upper_wind"><span>Upper Air Wind (Particles)</span></label>
+                </div>
+
+                <div id="upper-air-controls" class="weather-options" style="display: none; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 10px;">
+                    <div style="font-size: 11px; color: var(--muted); margin-bottom: 6px;">Flight Level</div>
+                    <select id="upper-wx-fl" style="width:100%; background:var(--surface); color:var(--ink); border:1px solid var(--border); border-radius:6px; padding:6px; font-size:11px; outline:none; cursor:pointer;">
+                        <option value="50">FL050 (~5,000 ft)</option>
+                        <option value="100">FL100 (~10,000 ft)</option>
+                        <option value="180">FL180 (~18,000 ft)</option>
+                        <option value="240">FL240 (~24,000 ft)</option>
+                        <option value="300">FL300 (~30,000 ft)</option>
+                        <option value="340" selected>FL340 (~34,000 ft)</option>
+                        <option value="390">FL390 (~39,000 ft)</option>
+                        <option value="450">FL450 (~45,000 ft)</option>
+                    </select>
                 </div>
                 <div class="weather-provider-info">
                     Data provided by <b>OpenWeather</b>, <b>RainViewer</b> & <b>Open-Meteo</b>
@@ -462,6 +478,7 @@
     </main>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
     <script src="https://unpkg.com/leaflet-velocity@1.9.0/dist/leaflet-velocity.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
@@ -477,7 +494,6 @@
     <script src="js/earth.js"></script>
     <script src="js/map.js"></script>
     <script src="js/app.js"></script>
-    <script src="js/upper-weather-layer.js"></script>
     <script src="js/route-planner.js"></script>
     <script src="js/measure.js"></script>
 </body>

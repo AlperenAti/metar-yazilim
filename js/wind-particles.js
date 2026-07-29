@@ -4,9 +4,16 @@
  */
 
 (function () {
+    const LEVELS = {
+        '50': 850, '100': 700, '180': 500, '240': 400,
+        '300': 300, '340': 250, '390': 200, '450': 150
+    };
+
     L.WindParticlesLayer = L.LayerGroup.extend({
-        initialize: function(options) {
+        initialize: function(fl) {
             L.LayerGroup.prototype.initialize.call(this);
+            this.fl = fl;
+            this.pressure = fl ? LEVELS[fl.toString()] : null;
             this._velocityLayer = null;
             this._currentGeneration = 0;
             this._abortController = null;
@@ -59,7 +66,13 @@
             const lon = e.latlng.lng.toFixed(2);
             
             try {
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=kn`;
+            try {
+                let url;
+                if (this.pressure) {
+                    url = `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=wind_speed_${this.pressure}hPa,wind_direction_${this.pressure}hPa&wind_speed_unit=kn&forecast_days=1`;
+                } else {
+                    url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=kn`;
+                }
                 const res = await fetch(url);
                 
                 if (!res.ok) {
@@ -69,9 +82,17 @@
                 
                 const data = await res.json();
                 
-                if (data && data.current && typeof data.current.wind_speed_10m === 'number') {
-                    const speedKn = data.current.wind_speed_10m;
-                    const dir = data.current.wind_direction_10m;
+                let speedKn = null, dir = null;
+                const currentHour = new Date().getUTCHours();
+                if (this.pressure && data.hourly && data.hourly[`wind_speed_${this.pressure}hPa`]) {
+                    speedKn = data.hourly[`wind_speed_${this.pressure}hPa`][currentHour];
+                    dir = data.hourly[`wind_direction_${this.pressure}hPa`][currentHour];
+                } else if (!this.pressure && data.current && typeof data.current.wind_speed_10m === 'number') {
+                    speedKn = data.current.wind_speed_10m;
+                    dir = data.current.wind_direction_10m;
+                }
+                
+                if (speedKn != null && dir != null) {
                     
                     const container = document.createElement('div');
                     container.style.fontFamily = "'Inter', sans-serif";
@@ -162,7 +183,12 @@
                 const fetchPromises = chunks.map(chunk => {
                     const lats = chunk.map(p => p.lat.toFixed(2)).join(',');
                     const lons = chunk.map(p => p.lon.toFixed(2)).join(',');
-                    const url = `https://api.open-meteo.com/v1/gfs?latitude=${lats}&longitude=${lons}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`;
+                    let url;
+                    if (this.pressure) {
+                        url = `https://api.open-meteo.com/v1/gfs?latitude=${lats}&longitude=${lons}&hourly=wind_speed_${this.pressure}hPa,wind_direction_${this.pressure}hPa&wind_speed_unit=ms&forecast_days=1`;
+                    } else {
+                        url = `https://api.open-meteo.com/v1/gfs?latitude=${lats}&longitude=${lons}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`;
+                    }
                     return fetch(url, { signal }).then(res => {
                         if (!res.ok) throw new Error("Open-Meteo Limit");
                         return res.json();
@@ -182,12 +208,20 @@
                 const uData = [];
                 const vData = [];
                 
+                const currentHour = new Date().getUTCHours();
                 for (let i = 0; i < allResults.length; i++) {
                     const point = allResults[i];
-                    if (point && point.current && typeof point.current.wind_direction_10m === 'number') {
-                        const speed = point.current.wind_speed_10m; 
-                        const dir = point.current.wind_direction_10m; 
-                        
+                    
+                    let speed = null, dir = null;
+                    if (this.pressure && point?.hourly && point.hourly[`wind_speed_${this.pressure}hPa`]) {
+                        speed = point.hourly[`wind_speed_${this.pressure}hPa`][currentHour];
+                        dir = point.hourly[`wind_direction_${this.pressure}hPa`][currentHour];
+                    } else if (!this.pressure && point?.current && typeof point.current.wind_direction_10m === 'number') {
+                        speed = point.current.wind_speed_10m;
+                        dir = point.current.wind_direction_10m;
+                    }
+
+                    if (speed != null && dir != null) {
                         const rad = dir * Math.PI / 180;
                         const u = -speed * Math.sin(rad);
                         const v = -speed * Math.cos(rad);

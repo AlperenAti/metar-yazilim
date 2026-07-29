@@ -1118,9 +1118,25 @@
         });
         document.getElementsByName('weather_layer').forEach(radio => {
             radio.addEventListener('change', (e) => {
-                if (e.target.checked) window.MapManager.setWeatherOverlay(e.target.value);
+                if (e.target.checked) {
+                    const isUpper = e.target.value.startsWith('upper_');
+                    const ctrl = document.getElementById('upper-air-controls');
+                    if (ctrl) ctrl.style.display = isUpper ? 'block' : 'none';
+                    window.MapManager.setWeatherOverlay(e.target.value);
+                }
             });
         });
+
+        const flSelect = document.getElementById('upper-wx-fl');
+        if (flSelect) {
+            flSelect.addEventListener('change', (e) => {
+                const activeRadio = document.querySelector('input[name="weather_layer"]:checked');
+                if (activeRadio && activeRadio.value.startsWith('upper_')) {
+                    // Re-trigger the active layer to update with new FL
+                    window.MapManager.setWeatherOverlay(activeRadio.value);
+                }
+            });
+        }
 
         const openDashboardBtn = $('open-dashboard-btn');
         if (openDashboardBtn) {

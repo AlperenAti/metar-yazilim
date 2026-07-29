@@ -483,13 +483,52 @@
                 console.error('Failed to load RainViewer radar', e);
             }
         } else if (type === 'wind_grid') {
-            currentWeatherLayer = new window.WindParticlesLayer();
+            currentWeatherLayer = new window.WindParticlesLayer(null);
             map.addLayer(currentWeatherLayer);
             
             const now = new Date();
             const zulu = `${now.getUTCHours().toString().padStart(2, '0')}:${now.getUTCMinutes().toString().padStart(2, '0')} Z`;
             timestampEl.textContent = `Wind Grid updated: ${zulu}`;
             timestampEl.classList.remove('hidden');
+        } else if (type === 'upper_wind') {
+            const fl = document.getElementById('upper-wx-fl')?.value || '340';
+            currentWeatherLayer = new window.WindParticlesLayer(fl);
+            map.addLayer(currentWeatherLayer);
+            
+            const now = new Date();
+            const zulu = `${now.getUTCHours().toString().padStart(2, '0')}:${now.getUTCMinutes().toString().padStart(2, '0')} Z`;
+            timestampEl.textContent = `Upper Air Wind (FL${fl}) updated: ${zulu}`;
+            timestampEl.classList.remove('hidden');
+        } else if (type === 'upper_temp') {
+            const fl = document.getElementById('upper-wx-fl')?.value || '340';
+            try {
+                timestampEl.textContent = `Fetching Upper Air Temp (FL${fl})...`;
+                timestampEl.classList.remove('hidden');
+                
+                const res = await fetch(`api/temp?fl=${fl}`);
+                const data = await res.json();
+                
+                currentWeatherLayer = L.heatLayer(data, {
+                    radius: 35,
+                    blur: 35,
+                    maxZoom: 6,
+                    max: 1.0,
+                    gradient: {
+                        0.0: '#a855f7', // -80C (Deep Purple)
+                        0.25: '#3b82f6', // -50C (Blue)
+                        0.5: '#0ea5e9', // -20C (Light Blue)
+                        0.75: '#10b981', // 10C (Green)
+                        1.0: '#ef4444'  // 40C (Red)
+                    }
+                }).addTo(map);
+
+                const now = new Date();
+                const zulu = `${now.getUTCHours().toString().padStart(2, '0')}:${now.getUTCMinutes().toString().padStart(2, '0')} Z`;
+                timestampEl.textContent = `Upper Air Temp (FL${fl}) updated: ${zulu}`;
+            } catch (e) {
+                console.error('Failed to load upper air temp', e);
+                timestampEl.textContent = 'Failed to load temperature data';
+            }
         } else {
             timestampEl.classList.add('hidden');
         }
