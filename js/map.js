@@ -443,7 +443,7 @@
             
         } else if (type === 'owm_precipitation') {
             currentWeatherLayer = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${OWM_API_KEY}`, {
-                opacity: 0.6, maxZoom: 18, attribution: '© OpenWeatherMap', className: 'weather-precip-layer'
+                opacity: 1.0, maxZoom: 18, attribution: '© OpenWeatherMap', className: 'weather-precip-layer'
             }).addTo(map);
             
             const now = new Date();
