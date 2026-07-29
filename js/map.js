@@ -81,7 +81,7 @@
         else if (activeLayer === 'pressure') varName = 'pressure_msl';
         else if (activeLayer === 'wind') varName = 'wind_speed_10m';
         else if (activeLayer === 'clouds') varName = 'cloud_cover';
-        else if (activeLayer === 'radar') varName = 'precipitation';
+        else if (activeLayer === 'radar' || activeLayer === 'owm_precipitation') varName = 'precipitation';
         else if (activeLayer === 'upper_temp') varName = 'upper_temp'; // Handled specially below
 
         try {
@@ -122,7 +122,7 @@
                         val = data.clouds.all;
                         unit = '%';
                         label = 'Cloud Cover';
-                    } else if (activeLayer === 'radar') {
+                    } else if (activeLayer === 'radar' || activeLayer === 'owm_precipitation') {
                         val = data.rain ? (data.rain['1h'] || 0) : 0;
                         unit = 'mm/h';
                         label = 'Precipitation';
@@ -439,6 +439,16 @@
             const now = new Date();
             const zulu = `${now.getUTCHours().toString().padStart(2, '0')}:${now.getUTCMinutes().toString().padStart(2, '0')} Z`;
             timestampEl.textContent = `Clouds updated: ${zulu}`;
+            timestampEl.classList.remove('hidden');
+            
+        } else if (type === 'owm_precipitation') {
+            currentWeatherLayer = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${OWM_API_KEY}`, {
+                opacity: 0.6, maxZoom: 18, attribution: '© OpenWeatherMap', className: 'weather-precip-layer'
+            }).addTo(map);
+            
+            const now = new Date();
+            const zulu = `${now.getUTCHours().toString().padStart(2, '0')}:${now.getUTCMinutes().toString().padStart(2, '0')} Z`;
+            timestampEl.textContent = `Precipitation updated: ${zulu}`;
             timestampEl.classList.remove('hidden');
             
         } else if (type === 'temperature') {
