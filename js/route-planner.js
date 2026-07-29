@@ -78,7 +78,7 @@
         if (totalNm > 120) {
             const f = tocNm / totalNm;
             const pos = gcInterpolate(dep, arr, f);
-            points.push({ label: 'TOC', type: 'toc', nmFromDep: Math.round(tocNm), ...pos });
+            points.push({ label: 'TOC (Top of Climb)', type: 'toc', nmFromDep: Math.round(tocNm), ...pos });
         }
 
         // Manual waypoints
@@ -103,7 +103,7 @@
         if (totalNm > 120) {
             const f = (totalNm - todNm) / totalNm;
             const pos = gcInterpolate(dep, arr, f);
-            points.push({ label: 'TOD', type: 'tod', nmFromDep: Math.round(totalNm - todNm), ...pos });
+            points.push({ label: 'TOD (Top of Descent)', type: 'tod', nmFromDep: Math.round(totalNm - todNm), ...pos });
         }
 
         // ARR
@@ -222,8 +222,9 @@
     let routeLayer = null;
 
     function clearRouteLayer() {
-        if (routeLayer && window._leafletMap) {
-            window._leafletMap.removeLayer(routeLayer);
+        const map = window.MapManager?.map;
+        if (routeLayer && map) {
+            map.removeLayer(routeLayer);
             routeLayer = null;
         }
     }
@@ -354,6 +355,7 @@
                 <span class="rp-title">Route Weather Briefing</span>
                 <span class="rp-route-label">${dep.icao} → ${arr.icao} &nbsp;·&nbsp; ${totalNm.toLocaleString()} NM</span>
             </div>
+            <button id="rp-detailed-btn" class="rp-calc-btn" type="button" style="font-size:10px; padding:6px 10px; margin-right:8px; margin-top:0;">Detailed View</button>
             <button id="rp-close-btn" class="close-button" type="button" aria-label="Close briefing">×</button>
         </div>
         ${sigmetHtml}
@@ -367,6 +369,10 @@
             panel.remove();
             clearRouteLayer();
         });
+        
+        document.getElementById('rp-detailed-btn').addEventListener('click', () => {
+            alert("Detailed Route Briefing Dashboard is coming soon!");
+        });
     }
 
     function showModal() {
@@ -378,7 +384,7 @@
         modal.className = 'route-planner-modal glass-panel';
         modal.innerHTML = `
         <div class="rp-modal-header">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><path d="M3 12h18M12 3l9 9-9 9"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><path d="M3 17l6-6 4 4 8-8"/><circle cx="3" cy="17" r="2"/><circle cx="9" cy="11" r="2"/><circle cx="13" cy="15" r="2"/><circle cx="21" cy="7" r="2"/></svg>
             <span>Route Weather Briefing</span>
             <button id="rp-modal-close" class="close-button" type="button">×</button>
         </div>
@@ -393,14 +399,17 @@
             </div>
             <div class="rp-field">
                 <label for="rp-fl">Cruise Flight Level</label>
-                <input id="rp-fl" type="number" min="50" max="600" value="${DEFAULT_FL}" placeholder="350">
+                <input id="rp-fl" type="text" value="FL${DEFAULT_FL}" placeholder="Ex: FL320">
             </div>
             <div class="rp-field rp-wp-field">
-                <label>Waypoints <span class="rp-muted">(optional, comma-separated ICAO)</span></label>
+                <label style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>Waypoints <span class="rp-muted">(optional)</span></span>
+                    <button id="rp-pick-map-btn" type="button" style="background:none;border:none;color:var(--brand);font-size:10px;cursor:pointer;text-decoration:underline;">Select on Map</button>
+                </label>
                 <input id="rp-waypoints" type="text" placeholder="e.g. LYBE, LOWW" autocomplete="off" spellcheck="false">
             </div>
             <button id="rp-calc-btn" class="rp-calc-btn" type="button">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 12h18M12 3l9 9-9 9"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 17l6-6 4 4 8-8"/></svg>
                 Calculate Route
             </button>
             <div id="rp-status" class="rp-status"></div>
@@ -418,6 +427,37 @@
                 e.target.setSelectionRange(s, s);
             });
         });
+        
+        const flInput = document.getElementById('rp-fl');
+        flInput.addEventListener('input', e => {
+            let val = e.target.value.replace(/\D/g, '');
+            if (val) e.target.value = 'FL' + val;
+            else e.target.value = '';
+        });
+        flInput.addEventListener('focus', e => {
+            if(!e.target.value) e.target.value = 'FL';
+        });
+
+        document.getElementById('rp-pick-map-btn').addEventListener('click', () => {
+            modal.style.display = 'none';
+            const map = window.MapManager?.map;
+            if(!map) return;
+            map.getContainer().style.cursor = 'crosshair';
+            const hint = document.createElement('div');
+            hint.className = 'measure-hint';
+            hint.textContent = 'Click anywhere on map to add waypoint coordinate';
+            document.body.appendChild(hint);
+            
+            map.once('click', (e) => {
+                map.getContainer().style.cursor = '';
+                hint.remove();
+                modal.style.display = 'block';
+                const wpInput = document.getElementById('rp-waypoints');
+                const val = wpInput.value.trim();
+                const coordStr = `${e.latlng.lat.toFixed(4)},${e.latlng.lng.toFixed(4)}`;
+                wpInput.value = val ? val + ', ' + coordStr : coordStr;
+            });
+        });
 
         document.getElementById('rp-calc-btn').addEventListener('click', () => runCalculation(modal));
     }
@@ -427,7 +467,8 @@
         const status = document.getElementById('rp-status');
         const depRaw = document.getElementById('rp-dep').value.trim().toUpperCase();
         const arrRaw = document.getElementById('rp-arr').value.trim().toUpperCase();
-        const fl     = parseInt(document.getElementById('rp-fl').value) || DEFAULT_FL;
+        const flStr  = document.getElementById('rp-fl').value;
+        const fl     = parseInt(flStr.replace(/\D/g, '')) || DEFAULT_FL;
         const wpRaw  = document.getElementById('rp-waypoints').value.trim();
 
         if (!depRaw || depRaw.length !== 4) { status.textContent = '⚠ Enter a valid 4-letter departure ICAO.'; return; }
@@ -447,8 +488,13 @@
             if (wpRaw) {
                 const wpCodes = wpRaw.split(',').map(s => s.trim()).filter(Boolean);
                 for (const code of wpCodes) {
-                    try { manualWps.push(await lookupAirport(code)); }
-                    catch { status.textContent = `⚠ Waypoint not found: ${code}`; return; }
+                    const coords = code.match(/^(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)$/);
+                    if (coords) {
+                        manualWps.push({ icao: 'MAP', name: 'Map Point', lat: parseFloat(coords[1]), lon: parseFloat(coords[3]) });
+                    } else {
+                        try { manualWps.push(await lookupAirport(code)); }
+                        catch { status.textContent = `⚠ Waypoint not found: ${code}`; return; }
+                    }
                 }
             }
 
@@ -481,7 +527,7 @@
             status.textContent = `❌ Error: ${err.message}`;
         } finally {
             btn.disabled = false;
-            btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 12h18M12 3l9 9-9 9"/></svg> Calculate Route`;
+            btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 17l6-6 4 4 8-8"/></svg> Calculate Route`;
         }
     }
 
@@ -511,7 +557,7 @@
         toolPanel.innerHTML = `
         <button id="route-planner-btn" class="map-tool-btn" title="Route Weather Briefing" aria-label="Route Weather Briefing">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="20" height="20">
-                <path d="M3 12h18M12 3l9 9-9 9"/>
+                <path d="M3 17l6-6 4 4 8-8"/><circle cx="3" cy="17" r="2"/><circle cx="9" cy="11" r="2"/><circle cx="13" cy="15" r="2"/><circle cx="21" cy="7" r="2"/>
             </svg>
         </button>`;
 
