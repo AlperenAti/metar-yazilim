@@ -408,7 +408,12 @@
         if (sigmetAlerts.length > 0) {
             const sigHtml = `<div class="rp-card" style="border-color:#e67e22; background:rgba(230,126,34,0.1);">
                 <div class="rp-card-header" style="color:#e67e22;">⚠️ SIGMET Alert</div>
-                <p style="padding:12px;font-size:13px;color:#fff;"><b>${sigmetAlerts.length} SIGMET${sigmetAlerts.length > 1 ? 's' : ''}</b> active along this route.</p>
+                <div style="padding:12px;font-size:13px;color:#fff;">
+                    <p style="margin-bottom:8px;"><b>${sigmetAlerts.length} SIGMET${sigmetAlerts.length > 1 ? 's' : ''}</b> active along this route.</p>
+                    <ul style="margin:0; padding-left:16px; opacity:0.9; line-height:1.4;">
+                        ${sigmetAlerts.map(s => `<li style="margin-bottom:4px;"><b>${s.firName || s.firId || 'Unknown FIR'}</b>: ${s.hazard || 'Hazard'} (${s.qualifier || 'Active'})</li>`).join('')}
+                    </ul>
+                </div>
             </div>`;
             grid.insertAdjacentHTML('afterbegin', sigHtml);
         }
@@ -638,6 +643,11 @@
                 document.getElementById('route-dash-content').classList.add('hidden');
                 document.getElementById('route-dash-empty-state').classList.remove('hidden');
                 clearRouteLayer();
+            });
+
+            document.getElementById('route-dash-show-map-btn').addEventListener('click', () => {
+                const mapBtn = document.getElementById('view-map-btn');
+                if (mapBtn) mapBtn.click();
             });
             
             ['rp-dash-dep','rp-dash-arr','rp-dash-waypoints'].forEach(id => {

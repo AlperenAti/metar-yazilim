@@ -1451,9 +1451,9 @@ body.hide-map-overlays #weather-playback-container {
 }
 .rp-wx-item span { font-size: 9px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
 .rp-wx-item strong { font-size: 11px; color: var(--ink); font-family: 'DM Mono', monospace; }
-.rp-upper-grid { background: rgba(96,173,255,.05); }
-.rp-wx-item.rp-upper { background: rgba(96,173,255,.06); }
-.rp-wx-item.rp-upper strong { color: #60adff; }
+.rp-upper-grid { background: var(--surface); border-top: 1px solid var(--border); }
+.rp-wx-item.rp-upper { background: var(--surface-strong); }
+.rp-wx-item.rp-upper strong { color: var(--brand); }
 .rp-no-data { padding: 10px 12px; font-size: 11px; color: var(--muted); text-align: center; }
 
 @media (max-width: 768px) {
