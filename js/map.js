@@ -102,17 +102,31 @@
                     throw new Error("No data");
                 }
             } else {
-                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=${varName}&wind_speed_unit=kn`);
+                const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${OWM_API_KEY}&units=metric`);
                 const data = await res.json();
                 
-                if (data && data.current && typeof data.current[varName] !== 'undefined') {
-                    val = data.current[varName];
-                    unit = data.current_units[varName];
-                    if (activeLayer === 'temperature') label = 'Temperature';
-                    else if (activeLayer === 'pressure') label = 'Pressure';
-                    else if (activeLayer === 'wind') label = 'Wind Speed';
-                    else if (activeLayer === 'clouds') label = 'Cloud Cover';
-                    else if (activeLayer === 'radar') label = 'Precipitation';
+                if (data && data.main) {
+                    if (activeLayer === 'temperature') {
+                        val = data.main.temp;
+                        unit = '°C';
+                        label = 'Temperature';
+                    } else if (activeLayer === 'pressure') {
+                        val = data.main.pressure;
+                        unit = 'hPa';
+                        label = 'Pressure';
+                    } else if (activeLayer === 'wind') {
+                        val = (data.wind.speed * 1.94384).toFixed(1); // m/s to knots
+                        unit = 'kn';
+                        label = 'Wind Speed';
+                    } else if (activeLayer === 'clouds') {
+                        val = data.clouds.all;
+                        unit = '%';
+                        label = 'Cloud Cover';
+                    } else if (activeLayer === 'radar') {
+                        val = data.rain ? (data.rain['1h'] || 0) : 0;
+                        unit = 'mm/h';
+                        label = 'Precipitation';
+                    }
                 } else {
                     throw new Error("No data");
                 }
