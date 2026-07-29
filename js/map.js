@@ -82,28 +82,46 @@
         else if (activeLayer === 'wind') varName = 'wind_speed_10m';
         else if (activeLayer === 'clouds') varName = 'cloud_cover';
         else if (activeLayer === 'radar') varName = 'precipitation';
+        else if (activeLayer === 'upper_temp') varName = 'upper_temp'; // Handled specially below
 
         try {
-            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=${varName}&wind_speed_unit=kn`);
-            const data = await res.json();
-            
-            if (data && data.current && typeof data.current[varName] !== 'undefined') {
-                const val = data.current[varName];
-                const unit = data.current_units[varName];
-                let label = '';
-                if (activeLayer === 'temperature') label = 'Temperature';
-                else if (activeLayer === 'pressure') label = 'Pressure';
-                else if (activeLayer === 'wind') label = 'Wind Speed';
-                else if (activeLayer === 'clouds') label = 'Cloud Cover';
-                else if (activeLayer === 'radar') label = 'Precipitation';
-
-                popup.setContent(`<div style="text-align:center;font-family:'Inter',sans-serif;font-size:13px;padding:4px;">
-                    <div style="color:#64748b;font-size:11px;margin-bottom:6px;">${lat.toFixed(4)}°, ${lng.toFixed(4)}°</div>
-                    <div style="color:#0ea5e9;margin-top:4px;font-size:14px;font-weight:700;">${label}: ${val} ${unit}</div>
-                </div>`);
+            let val, unit, label;
+            if (activeLayer === 'upper_temp') {
+                const fl = document.getElementById('upper-wx-fl')?.value || '340';
+                const LEVELS = { '50': 850, '100': 700, '180': 500, '240': 400, '300': 300, '340': 250, '390': 200, '450': 150 };
+                const pressure = LEVELS[fl] || 250;
+                const url = `https://api.open-meteo.com/v1/gfs?latitude=${lat.toFixed(2)}&longitude=${lng.toFixed(2)}&hourly=temperature_${pressure}hPa&timezone=UTC&forecast_days=1`;
+                const res = await fetch(url);
+                const data = await res.json();
+                const currentHour = new Date().getUTCHours();
+                if (data && data.hourly && data.hourly[`temperature_${pressure}hPa`]) {
+                    val = data.hourly[`temperature_${pressure}hPa`][currentHour];
+                    unit = '°C';
+                    label = `Upper Temp (FL${fl})`;
+                } else {
+                    throw new Error("No data");
+                }
             } else {
-                throw new Error("No data");
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=${varName}&wind_speed_unit=kn`);
+                const data = await res.json();
+                
+                if (data && data.current && typeof data.current[varName] !== 'undefined') {
+                    val = data.current[varName];
+                    unit = data.current_units[varName];
+                    if (activeLayer === 'temperature') label = 'Temperature';
+                    else if (activeLayer === 'pressure') label = 'Pressure';
+                    else if (activeLayer === 'wind') label = 'Wind Speed';
+                    else if (activeLayer === 'clouds') label = 'Cloud Cover';
+                    else if (activeLayer === 'radar') label = 'Precipitation';
+                } else {
+                    throw new Error("No data");
+                }
             }
+
+            popup.setContent(`<div style="text-align:center;font-family:'Inter',sans-serif;font-size:13px;padding:4px;">
+                <div style="color:#64748b;font-size:11px;margin-bottom:6px;">${lat.toFixed(4)}°, ${lng.toFixed(4)}°</div>
+                <div style="color:#0ea5e9;margin-top:4px;font-size:14px;font-weight:700;">${label}: ${val} ${unit}</div>
+            </div>`);
         } catch (err) {
             popup.setContent(`<div style="text-align:center;font-family:'Inter',sans-serif;font-size:13px;padding:4px;">
                 <div style="color:#64748b;font-size:11px;margin-bottom:6px;">${lat.toFixed(4)}°, ${lng.toFixed(4)}°</div>
@@ -501,34 +519,15 @@
             timestampEl.classList.remove('hidden');
         } else if (type === 'upper_temp') {
             const fl = document.getElementById('upper-wx-fl')?.value || '340';
-            try {
-                timestampEl.textContent = `Fetching Upper Air Temp (FL${fl})...`;
-                timestampEl.classList.remove('hidden');
-                
-                const res = await fetch(`api/temp?fl=${fl}`);
-                const data = await res.json();
-                
-                currentWeatherLayer = L.heatLayer(data, {
-                    radius: 35,
-                    blur: 35,
-                    maxZoom: 6,
-                    max: 1.0,
-                    gradient: {
-                        0.0: '#a855f7', // -80C (Deep Purple)
-                        0.25: '#3b82f6', // -50C (Blue)
-                        0.5: '#0ea5e9', // -20C (Light Blue)
-                        0.75: '#10b981', // 10C (Green)
-                        1.0: '#ef4444'  // 40C (Red)
-                    }
-                }).addTo(map);
-
-                const now = new Date();
-                const zulu = `${now.getUTCHours().toString().padStart(2, '0')}:${now.getUTCMinutes().toString().padStart(2, '0')} Z`;
-                timestampEl.textContent = `Upper Air Temp (FL${fl}) updated: ${zulu}`;
-            } catch (e) {
-                console.error('Failed to load upper air temp', e);
-                timestampEl.textContent = 'Failed to load temperature data';
+            if (window.UpperTempLayer) {
+                currentWeatherLayer = new window.UpperTempLayer(fl);
+                map.addLayer(currentWeatherLayer);
             }
+            
+            const now = new Date();
+            const zulu = `${now.getUTCHours().toString().padStart(2, '0')}:${now.getUTCMinutes().toString().padStart(2, '0')} Z`;
+            timestampEl.textContent = `Upper Air Temp (FL${fl}) updated: ${zulu}`;
+            timestampEl.classList.remove('hidden');
         } else {
             timestampEl.classList.add('hidden');
         }
