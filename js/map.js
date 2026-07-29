@@ -567,7 +567,7 @@
         
         if (!legendContainer || !titleEl || !gradientEl || !labelsEl) return;
         
-        if (type === 'none' || type === 'clouds' || type === 'satellite') {
+        if (type === 'none' || type === 'clouds' || type === 'satellite' || type === 'owm_precipitation') {
             legendContainer.classList.add('hidden');
             return;
         }
