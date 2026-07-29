@@ -286,13 +286,14 @@
         return arrows[Math.round(((dir % 360) + 360) % 360 / 45) % 8] + ' ' + Math.round(dir) + '°';
     }
 
-    function renderPointCard(pt, wx) {
+    function renderPointCard(pt, wx, fl) {
         const isApt = pt.type === 'dep' || pt.type === 'arr';
         const typeLabels = {
             dep: '🛫 Departure', toc: '📈 Top of Climb', enroute: '🔹 En Route',
             waypoint: '📍 Waypoint', tod: '📉 Top of Descent', arr: '🛬 Arrival'
         };
-        const header = `${typeLabels[pt.type] || '🔹 Waypoint'} — <b>${pt.label}</b>`;
+        const flLabel = !isApt && fl ? `<span style="font-size:10px; color:var(--brand); margin-left:8px;">(FL${fl})</span>` : '';
+        const header = `${typeLabels[pt.type] || '🔹 Waypoint'} — <b>${pt.label}</b>${flLabel}`;
         const dist   = `<span class="rp-dist">${pt.nmFromDep.toLocaleString()} NM from DEP</span>`;
 
         let body = '';
@@ -309,7 +310,7 @@
             }
         }
 
-        if (wx.surface) {
+        if (wx.surface && isApt) {
             const s = wx.surface;
             body += `<div class="rp-wx-grid">
                 <div class="rp-wx-item"><span>Surface Wind</span><strong>${renderWindDir(s.wind_direction_10m)} / ${Math.round(s.wind_speed_10m ?? 0)} kt</strong></div>
@@ -339,7 +340,7 @@
         </div>`;
     }
 
-    function showBriefingPanel(dep, arr, routeData, wxData, sigmetAlerts) {
+    function showBriefingPanel(dep, arr, routeData, wxData, sigmetAlerts, fl) {
         const existing = document.getElementById('route-briefing-panel');
         if (existing) existing.remove();
 
@@ -348,7 +349,7 @@
             ? `<div class="rp-sigmet-alert">⚠️ <b>${sigmetAlerts.length} SIGMET${sigmetAlerts.length > 1 ? 's' : ''}</b> active along route — check SIGMET layer for details.</div>`
             : `<div class="rp-sigmet-ok">✅ No active SIGMETs detected along route.</div>`;
 
-        const cardsHtml = wxData.map(({ pt, wx }) => renderPointCard(pt, wx)).join('');
+        const cardsHtml = wxData.map(({ pt, wx }) => renderPointCard(pt, wx, fl)).join('');
 
         const panel = document.createElement('div');
         panel.id = 'route-briefing-panel';
@@ -394,7 +395,7 @@
         });
     }
 
-    function renderDashboardCards(dep, arr, routeData, wxData, sigmetAlerts) {
+    function renderDashboardCards(dep, arr, routeData, wxData, sigmetAlerts, fl) {
         document.getElementById('route-dash-empty-state').classList.add('hidden');
         document.getElementById('route-dash-content').classList.remove('hidden');
         
@@ -402,7 +403,7 @@
         document.getElementById('route-dash-dist-val').textContent = `${routeData.totalNm.toLocaleString()} NM`;
         
         const grid = document.getElementById('route-dash-cards-grid');
-        grid.innerHTML = wxData.map(({ pt, wx }) => renderPointCard(pt, wx)).join('');
+        grid.innerHTML = wxData.map(({ pt, wx }) => renderPointCard(pt, wx, fl)).join('');
         
         // Render sigmets alert as a card if any
         if (sigmetAlerts.length > 0) {
@@ -578,9 +579,9 @@
 
             // 7. Render UI based on mode
             if (isDash) {
-                renderDashboardCards(dep, arr, { totalNm }, wxData, sigmetAlerts);
+                renderDashboardCards(dep, arr, { totalNm }, wxData, sigmetAlerts, fl);
             } else {
-                showBriefingPanel(dep, arr, { totalNm }, wxData, sigmetAlerts);
+                showBriefingPanel(dep, arr, { totalNm }, wxData, sigmetAlerts, fl);
                 if (modal) modal.remove();
             }
 
@@ -599,9 +600,10 @@
 
         const tasks = [];
 
-        if (isApt) tasks.push(fetchMetarTaf(icaoForApt).then(d => { wx.metar = d.metar; wx.taf = d.taf; }));
-        tasks.push(fetchSurfaceWx(pt.lat, pt.lon).then(d => { wx.surface = d; }));
-        if (pt.type !== 'dep' && pt.type !== 'arr') {
+        if (isApt) {
+            tasks.push(fetchMetarTaf(icaoForApt).then(d => { wx.metar = d.metar; wx.taf = d.taf; }));
+            tasks.push(fetchSurfaceWx(pt.lat, pt.lon).then(d => { wx.surface = d; }));
+        } else {
             tasks.push(fetchUpperAirWx(pt.lat, pt.lon, fl).then(d => { wx.upper = d; }));
         }
 
