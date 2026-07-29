@@ -16,7 +16,7 @@ class NotamProvider {
         
         let res;
         try {
-            res = await fetch('https://metar-yazilim.onrender.com/api/weather/notam?icao=' + icao);
+            res = await fetch('/api/weather/notam?icao=' + icao);
         } catch (e) {
             throw new Error("Network error or server unreachable");
         }
