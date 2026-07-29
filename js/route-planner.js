@@ -71,20 +71,20 @@
         const points = [];
 
         // DEP
-        points.push({ label: 'DEP', type: 'dep', nmFromDep: 0, ...dep });
+        points.push({ label: 'DEP', type: 'dep', nmFromDep: 0, fl: null, ...dep });
 
         // TOC (only if flight long enough)
         const tocNm = Math.min(TOC_NM, totalNm * 0.15);
         if (totalNm > 120) {
             const f = tocNm / totalNm;
             const pos = gcInterpolate(dep, arr, f);
-            points.push({ label: 'TOC (Top of Climb)', type: 'toc', nmFromDep: Math.round(tocNm), ...pos });
+            points.push({ label: 'TOC (Top of Climb)', type: 'toc', nmFromDep: Math.round(tocNm), fl: flightLevel, ...pos });
         }
 
         // Manual waypoints
         manualWps.forEach((wp, idx) => {
             const nmFromDep = (gcDistance(dep, wp) / NM_TO_KM);
-            points.push({ label: `WP${idx+1}`, type: 'waypoint', nmFromDep: Math.round(nmFromDep), ...wp });
+            points.push({ label: `WP${idx+1}`, type: 'waypoint', nmFromDep: Math.round(nmFromDep), fl: flightLevel, ...wp });
         });
 
         // Auto en-route waypoints (if no manual ones and route is long)
@@ -94,7 +94,7 @@
                 const nm = WP_INTERVAL_NM * i;
                 const f  = nm / totalNm;
                 const pos = gcInterpolate(dep, arr, f);
-                points.push({ label: `EN${i}`, type: 'enroute', nmFromDep: Math.round(nm), ...pos });
+                points.push({ label: `EN${i}`, type: 'enroute', nmFromDep: Math.round(nm), fl: flightLevel, ...pos });
             }
         }
 
@@ -103,11 +103,11 @@
         if (totalNm > 120) {
             const f = (totalNm - todNm) / totalNm;
             const pos = gcInterpolate(dep, arr, f);
-            points.push({ label: 'TOD (Top of Descent)', type: 'tod', nmFromDep: Math.round(totalNm - todNm), ...pos });
+            points.push({ label: 'TOD (Top of Descent)', type: 'tod', nmFromDep: Math.round(totalNm - todNm), fl: flightLevel, ...pos });
         }
 
         // ARR
-        points.push({ label: 'ARR', type: 'arr', nmFromDep: Math.round(totalNm), ...arr });
+        points.push({ label: 'ARR', type: 'arr', nmFromDep: Math.round(totalNm), fl: null, ...arr });
 
         // Sort by distance from dep
         points.sort((a, b) => a.nmFromDep - b.nmFromDep);
@@ -190,11 +190,12 @@
     /** Point-in-polygon (ray casting) for SIGMET intersection */
     function pointInPolygon(pt, coords) {
         let inside = false;
+        const x = pt.lon, y = pt.lat;
         for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
             const xi = coords[i][0], yi = coords[i][1];
             const xj = coords[j][0], yj = coords[j][1];
-            if (((yi > pt.lon) !== (yj > pt.lon)) && pt.lat < (xj-xi)*(pt.lon-yi)/(yj-yi)+xi)
-                inside = !inside;
+            const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
         }
         return inside;
     }
@@ -292,7 +293,9 @@
             dep: '🛫 Departure', toc: '📈 Top of Climb', enroute: '🔹 En Route',
             waypoint: '📍 Waypoint', tod: '📉 Top of Descent', arr: '🛬 Arrival'
         };
-        const flLabel = !isApt && fl ? `<span style="font-size:10px; color:var(--brand); margin-left:8px;">(FL${fl})</span>` : '';
+        const canEdit = pt.type === 'enroute' || pt.type === 'waypoint';
+        const ptFl = pt.fl || fl;
+        const flLabel = !isApt && ptFl ? `<span class="rp-fl-label ${canEdit ? 'rp-editable-fl' : ''}" data-idx="${pt.nmFromDep}" title="${canEdit ? 'Double-click to edit' : ''}" style="font-size:10px; color:var(--brand); margin-left:8px; cursor:${canEdit ? 'pointer' : 'default'}; padding: 2px 4px; border-radius: 4px; border: 1px solid transparent; transition: 0.2s;">(FL${ptFl})</span>` : '';
         const header = `${typeLabels[pt.type] || '🔹 Waypoint'} — <b>${pt.label}</b>${flLabel}`;
         const dist   = `<span class="rp-dist">${pt.nmFromDep.toLocaleString()} NM from DEP</span>`;
 
@@ -393,6 +396,66 @@
                 document.getElementById('route-planner-modal').style.display = 'none';
             }
         });
+        
+        attachFLEditors(panel.querySelector('.rp-cards-scroll'), wxData, dep, arr, fl);
+    }
+
+    function attachFLEditors(container, wxData, dep, arr, mainFl) {
+        container.querySelectorAll('.rp-editable-fl').forEach(el => {
+            el.addEventListener('dblclick', function(e) {
+                e.stopPropagation();
+                if (this.querySelector('input')) return; // already editing
+                const currentVal = this.innerText.replace(/\D/g, '');
+                this.innerHTML = `<input type="text" value="${currentVal}" style="width:40px; font-size:10px; background:var(--bg); color:var(--ink); border:1px solid var(--brand); border-radius:3px; padding:1px 3px; outline:none; text-align:center;">`;
+                const input = this.querySelector('input');
+                input.focus();
+                input.select();
+                
+                const finishEdit = async () => {
+                    let val = parseInt(input.value.replace(/\D/g, ''));
+                    if (isNaN(val) || val < 10) val = parseInt(currentVal);
+                    if (val > 550) val = 550;
+                    
+                    this.innerHTML = `(FL${val})`;
+                    
+                    if (val !== parseInt(currentVal)) {
+                        const dist = parseFloat(this.getAttribute('data-idx'));
+                        const ptData = wxData.find(d => Math.abs(d.pt.nmFromDep - dist) < 0.1);
+                        if (ptData) {
+                            ptData.pt.fl = val; // update the flight level for this point
+                            // Re-fetch only this point's weather
+                            this.innerHTML = `<span style="opacity:0.5;">(Fetching...)</span>`;
+                            try {
+                                const newWx = await fetchRoutePointWx(ptData.pt, dep, arr, val);
+                                ptData.wx = newWx;
+                                // Re-render just this card
+                                const cardHtml = renderPointCard(ptData.pt, ptData.wx, mainFl);
+                                const cardEl = this.closest('.rp-card');
+                                if (cardEl) {
+                                    cardEl.outerHTML = cardHtml;
+                                    // Re-attach listeners after replacing HTML
+                                    attachFLEditors(container, wxData, dep, arr, mainFl);
+                                }
+                            } catch(err) {
+                                console.error(err);
+                                this.innerHTML = `(FL${currentVal})`;
+                            }
+                        }
+                    }
+                };
+
+                input.addEventListener('blur', finishEdit);
+                input.addEventListener('keydown', (ev) => {
+                    if (ev.key === 'Enter') {
+                        ev.preventDefault();
+                        input.blur();
+                    }
+                    if (ev.key === 'Escape') {
+                        this.innerHTML = `(FL${currentVal})`;
+                    }
+                });
+            });
+        });
     }
 
     function renderDashboardCards(dep, arr, routeData, wxData, sigmetAlerts, fl) {
@@ -418,6 +481,8 @@
             </div>`;
             grid.insertAdjacentHTML('afterbegin', sigHtml);
         }
+        
+        attachFLEditors(grid, wxData, dep, arr, fl);
     }
 
     function showModal() {
@@ -570,8 +635,9 @@
 
             const wxData = points.map((pt, i) => ({ pt, wx: wxResults[i] }));
 
-            // 5. Check SIGMET intersections
-            const sigmetAlerts = checkSigmetIntersection(points, sigmets);
+            // 5. Check SIGMET intersections using dense points along the route
+            const denseRoutePts = gcPoints(dep, arr, 100);
+            const sigmetAlerts = checkSigmetIntersection(denseRoutePts, sigmets);
 
             // 6. Draw on map
             const map = window.MapManager?.map;
