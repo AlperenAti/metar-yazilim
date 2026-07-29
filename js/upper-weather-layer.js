@@ -135,7 +135,7 @@
             }
 
             const pressure = LEVELS[currentFL];
-            const url = \`https://api.open-meteo.com/v1/forecast?latitude=\${lats.join(',')}&longitude=\${lons.join(',')}&hourly=temperature_\${pressure}hPa,wind_speed_\${pressure}hPa,wind_direction_\${pressure}hPa&wind_speed_unit=kn&timezone=UTC&forecast_days=1\`;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats.join(',')}&longitude=${lons.join(',')}&hourly=temperature_${pressure}hPa,wind_speed_${pressure}hPa,wind_direction_${pressure}hPa&wind_speed_unit=kn&timezone=UTC&forecast_days=1`;
 
             const res = await fetch(url, { signal: fetchController.signal });
             if (!res.ok) throw new Error('API Error');
@@ -148,9 +148,9 @@
 
             responses.forEach(loc => {
                 if (!loc.hourly) return;
-                const temp = loc.hourly[\`temperature_\${pressure}hPa\`][currentHour];
-                const spd = loc.hourly[\`wind_speed_\${pressure}hPa\`][currentHour];
-                const dir = loc.hourly[\`wind_direction_\${pressure}hPa\`][currentHour];
+                const temp = loc.hourly[`temperature_${pressure}hPa`][currentHour];
+                const spd = loc.hourly[`wind_speed_${pressure}hPa`][currentHour];
+                const dir = loc.hourly[`wind_direction_${pressure}hPa`][currentHour];
                 
                 if (temp == null || spd == null || dir == null) return;
                 
@@ -179,20 +179,20 @@
     function drawMarker(lat, lon, temp, spd, dir) {
         const color = getTempColor(temp);
         
-        const arrow = \`<svg viewBox="0 0 24 24" style="transform: rotate(\${dir}deg); width:16px; height:16px; color:\${color}; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; drop-shadow: 0 1px 2px rgba(0,0,0,0.5);">
+        const arrow = `<svg viewBox="0 0 24 24" style="transform: rotate(${dir}deg); width:16px; height:16px; color:${color}; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; drop-shadow: 0 1px 2px rgba(0,0,0,0.5);">
             <line x1="12" y1="20" x2="12" y2="4"></line>
             <polyline points="6 10 12 4 18 10"></polyline>
-        </svg>\`;
+        </svg>`;
 
-        const html = \`
+        const html = `
             <div class="uw-marker">
-                <div class="uw-arrow">\${arrow}</div>
+                <div class="uw-arrow">${arrow}</div>
                 <div class="uw-data">
-                    <span class="uw-spd">\${Math.round(spd)}<small style="font-size:7px;opacity:0.7">kt</small></span>
-                    <span class="uw-temp" style="color:\${color}">\${Math.round(temp)}°</span>
+                    <span class="uw-spd">${Math.round(spd)}<small style="font-size:7px;opacity:0.7">kt</small></span>
+                    <span class="uw-temp" style="color:${color}">${Math.round(temp)}°</span>
                 </div>
             </div>
-        \`;
+        `;
 
         const icon = L.divIcon({
             className: 'uw-marker-wrapper',
