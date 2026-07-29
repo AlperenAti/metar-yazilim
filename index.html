@@ -82,6 +82,26 @@
                     <label class="radio-row"><input type="radio" name="weather_layer" value="wind"><span>Wind Speed Heatmap</span></label>
                     <label class="radio-row"><input type="radio" name="weather_layer" value="pressure"><span>Sea Level Pressure</span></label>
                     <label class="radio-row"><input type="radio" name="weather_layer" value="wind_grid"><span>Wind Grid (Particles)</span></label>
+                </div>
+                <div class="weather-provider-info">
+                    Data provided by <b>OpenWeather</b>, <b>RainViewer</b> & <b>Open-Meteo</b>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Upper Air Weather Toggle -->
+        <div class="weather-menu-wrapper" style="position: relative;">
+            <button id="upper-weather-menu-btn" class="map-ctrl-btn" aria-label="Upper Air Layers" title="Upper Air Layers">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                    <path d="M4 12h16M4 6h16M4 18h16" />
+                </svg>
+            </button>
+            <div id="upper-weather-menu-panel" class="weather-menu-panel glass-panel hidden">
+                <div class="weather-menu-header">
+                    <h3>Upper Air Weather</h3>
+                    <button id="close-upper-weather-menu" class="close-button" type="button">×</button>
+                </div>
+                <div class="weather-options">
                     <label class="radio-row"><input type="radio" name="weather_layer" value="upper_temp"><span>Upper Air Temp (Heatmap)</span></label>
                     <label class="radio-row"><input type="radio" name="weather_layer" value="upper_wind"><span>Upper Air Wind (Particles)</span></label>
                 </div>
@@ -100,7 +120,7 @@
                     </select>
                 </div>
                 <div class="weather-provider-info">
-                    Data provided by <b>OpenWeather</b>, <b>RainViewer</b> & <b>Open-Meteo</b>
+                    Data provided by <b>Open-Meteo</b>
                 </div>
             </div>
         </div>

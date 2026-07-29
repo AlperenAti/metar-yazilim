@@ -66,7 +66,6 @@
             const lon = e.latlng.lng.toFixed(2);
             
             try {
-            try {
                 let url;
                 if (this.pressure) {
                     url = `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=wind_speed_${this.pressure}hPa,wind_direction_${this.pressure}hPa&wind_speed_unit=kn&forecast_days=1`;

@@ -1116,6 +1116,19 @@
             $('earth-menu-btn').classList.remove('active');
             $('earth-menu-panel').classList.add('hidden');
         });
+
+        const upperWxBtn = $('upper-weather-menu-btn');
+        const upperWxPanel = $('upper-weather-menu-panel');
+        if (upperWxBtn && upperWxPanel) {
+            upperWxBtn.addEventListener('click', () => {
+                upperWxBtn.classList.toggle('active');
+                upperWxPanel.classList.toggle('hidden');
+            });
+            $('close-upper-weather-menu').addEventListener('click', () => {
+                upperWxBtn.classList.remove('active');
+                upperWxPanel.classList.add('hidden');
+            });
+        }
         document.getElementsByName('weather_layer').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 if (e.target.checked) {
