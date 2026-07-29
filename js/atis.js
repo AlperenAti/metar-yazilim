@@ -13,26 +13,48 @@
         return String(text).toUpperCase().split('').map(c => PHONETIC[c] || c).join(' ');
     }
 
-    function calculateActiveRunway(referenceHeading, windDirection) {
-        if (!referenceHeading || windDirection === null || windDirection === 'VRB') {
-            return referenceHeading ? String(Math.round(referenceHeading / 10)).padStart(2, '0') : null;
+    function calculateActiveRunway(airport, windDirection) {
+        if (!airport.runways || airport.runways.length === 0) {
+            return airport.runwayHeading ? String(Math.round(airport.runwayHeading / 10)).padStart(2, '0') : null;
         }
-        
-        const rwy1 = Math.round(referenceHeading / 10);
-        let rwy2 = rwy1 + 18;
-        if (rwy2 > 36) rwy2 -= 36;
-        
-        const hdg1 = rwy1 * 10;
-        const hdg2 = rwy2 * 10;
-        
-        const diff1 = Math.abs(windDirection - hdg1);
-        const diff2 = Math.abs(windDirection - hdg2);
-        
-        const minDiff1 = Math.min(diff1, 360 - diff1);
-        const minDiff2 = Math.min(diff2, 360 - diff2);
-        
-        const active = minDiff1 <= minDiff2 ? rwy1 : rwy2;
-        return String(active).padStart(2, '0');
+
+        let bestRunway = null;
+        let bestHeadwind = -999;
+        let bestMinDiff = 360;
+
+        airport.runways.forEach(r => {
+            const r1 = r[0];
+            const r2 = r[1];
+            
+            if (r1) {
+                const hdg1 = window.getRunwayTrueHeading ? Math.round(window.getRunwayTrueHeading(airport.icao, r1)) : parseInt(r1, 10) * 10;
+                const diff1 = windDirection !== null && windDirection !== 'VRB' ? Math.abs(windDirection - hdg1) : 0;
+                const minDiff1 = Math.min(diff1, 360 - diff1);
+                const rad = minDiff1 * Math.PI / 180;
+                const headwind1 = (windDirection !== null && windDirection !== 'VRB') ? Math.cos(rad) : 1;
+
+                if (headwind1 > bestHeadwind || (headwind1 === bestHeadwind && minDiff1 < bestMinDiff)) {
+                    bestHeadwind = headwind1;
+                    bestMinDiff = minDiff1;
+                    bestRunway = r1;
+                }
+            }
+            if (r2) {
+                const hdg2 = window.getRunwayTrueHeading ? Math.round(window.getRunwayTrueHeading(airport.icao, r2)) : parseInt(r2, 10) * 10;
+                const diff2 = windDirection !== null && windDirection !== 'VRB' ? Math.abs(windDirection - hdg2) : 0;
+                const minDiff2 = Math.min(diff2, 360 - diff2);
+                const rad = minDiff2 * Math.PI / 180;
+                const headwind2 = (windDirection !== null && windDirection !== 'VRB') ? Math.cos(rad) : 1;
+
+                if (headwind2 > bestHeadwind || (headwind2 === bestHeadwind && minDiff2 < bestMinDiff)) {
+                    bestHeadwind = headwind2;
+                    bestMinDiff = minDiff2;
+                    bestRunway = r2;
+                }
+            }
+        });
+
+        return bestRunway;
     }
 
     function parseSkyCondition(raw) {
@@ -93,7 +115,7 @@
         }
         
         // Active Runway
-        const activeRunway = calculateActiveRunway(airport.runwayHeading, metar.windDirection);
+        const activeRunway = calculateActiveRunway(airport, metar.windDirection);
         if (activeRunway) {
             text += `Landing and departing runway ${pronounce(activeRunway)}. `;
         }

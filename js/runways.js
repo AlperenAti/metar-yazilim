@@ -91,15 +91,7 @@
         }
 
         getBearing(lat1, lon1, lat2, lon2) {
-            const lat1Rad = lat1 * Math.PI / 180;
-            const lat2Rad = lat2 * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            
-            const y = Math.sin(dLon) * Math.cos(lat2Rad);
-            const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
-            const brng = Math.atan2(y, x);
-            
-            return (brng * 180 / Math.PI + 360) % 360;
+            return window.getBearing(lat1, lon1, lat2, lon2);
         }
 
         drawRunways(apt) {
@@ -142,4 +134,37 @@
     }
 
     window.RunwayLayer = RunwayLayer;
+
+    // Expose bearing calculation and a helper to get true heading
+    window.getBearing = function(lat1, lon1, lat2, lon2) {
+        const lat1Rad = lat1 * Math.PI / 180;
+        const lat2Rad = lat2 * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        
+        const y = Math.sin(dLon) * Math.cos(lat2Rad);
+        const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+        const brng = Math.atan2(y, x);
+        
+        return (brng * 180 / Math.PI + 360) % 360;
+    };
+
+    window.getRunwayTrueHeading = function(icao, rwyId) {
+        if (!window.MapManager || !window.MapManager.runwayCoords || !window.MapManager.runwayCoords[icao]) {
+            const match = rwyId.match(/^0*(\d+)/);
+            return match ? parseInt(match[1], 10) * 10 : 0;
+        }
+        
+        const runways = window.MapManager.runwayCoords[icao];
+        for (const rwy of runways) {
+            if (rwy.id1 === rwyId && rwy.lat1 && rwy.lon1 && rwy.lat2 && rwy.lon2) {
+                return window.getBearing(rwy.lat1, rwy.lon1, rwy.lat2, rwy.lon2);
+            }
+            if (rwy.id2 === rwyId && rwy.lat1 && rwy.lon1 && rwy.lat2 && rwy.lon2) {
+                return window.getBearing(rwy.lat2, rwy.lon2, rwy.lat1, rwy.lon1);
+            }
+        }
+        
+        const match = rwyId.match(/^0*(\d+)/);
+        return match ? parseInt(match[1], 10) * 10 : 0;
+    };
 })();
