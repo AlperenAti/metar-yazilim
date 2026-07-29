@@ -220,12 +220,16 @@
 
     /* ── Map layer management ──────────────────────────────── */
     let routeLayer = null;
+    let tempWpLayer = null;
 
     function clearRouteLayer() {
         const map = window.MapManager?.map;
         if (routeLayer && map) {
             map.removeLayer(routeLayer);
             routeLayer = null;
+        }
+        if (tempWpLayer) {
+            tempWpLayer.clearLayers();
         }
     }
 
@@ -465,9 +469,13 @@
         
         const flInput = document.getElementById('rp-fl');
         flInput.addEventListener('input', e => {
-            let val = e.target.value.replace(/\D/g, '');
-            if (val) e.target.value = 'FL' + val;
-            else e.target.value = '';
+            let val = parseInt(e.target.value.replace(/\D/g, ''));
+            if (!isNaN(val)) {
+                if (val > 550) val = 550;
+                e.target.value = 'FL' + val;
+            } else {
+                e.target.value = '';
+            }
         });
         flInput.addEventListener('focus', e => {
             if(!e.target.value) e.target.value = 'FL';
@@ -486,10 +494,14 @@
             map.once('click', (e) => {
                 map.getContainer().style.cursor = '';
                 hint.remove();
+                
+                if (!tempWpLayer) tempWpLayer = L.layerGroup().addTo(map);
+                L.circleMarker(e.latlng, { radius: 5, color: '#f59e0b', weight: 2, fillColor: '#f59e0b', fillOpacity: 0.5 }).addTo(tempWpLayer);
+                
                 modal.style.display = 'block';
                 const wpInput = document.getElementById('rp-waypoints');
                 const val = wpInput.value.trim();
-                const coordStr = `${e.latlng.lat.toFixed(4)},${e.latlng.lng.toFixed(4)}`;
+                const coordStr = `${e.latlng.lat.toFixed(4)}/${e.latlng.lng.toFixed(4)}`;
                 wpInput.value = val ? val + ', ' + coordStr : coordStr;
             });
         });
@@ -497,7 +509,8 @@
         document.getElementById('rp-calc-btn').addEventListener('click', () => {
             const dep = document.getElementById('rp-dep').value.trim().toUpperCase();
             const arr = document.getElementById('rp-arr').value.trim().toUpperCase();
-            const fl = parseInt(document.getElementById('rp-fl').value.replace(/\D/g, '')) || DEFAULT_FL;
+            let fl = parseInt(document.getElementById('rp-fl').value.replace(/\D/g, '')) || DEFAULT_FL;
+            if (fl > 550) fl = 550;
             const wp = document.getElementById('rp-waypoints').value.trim();
             runCalculation(dep, arr, fl, wp, 'modal', modal);
         });
@@ -517,6 +530,8 @@
         btn.textContent = 'Fetching data…';
         status.textContent = '';
 
+        if (tempWpLayer) tempWpLayer.clearLayers();
+
         try {
             // 1. Resolve airports
             status.textContent = '📡 Resolving airports…';
@@ -527,7 +542,7 @@
             if (wpRaw) {
                 const wpCodes = wpRaw.split(',').map(s => s.trim()).filter(Boolean);
                 for (const code of wpCodes) {
-                    const coords = code.match(/^(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)$/);
+                    const coords = code.match(/^(-?\d+(\.\d+)?)\/(-?\d+(\.\d+)?)$/);
                     if (coords) {
                         manualWps.push({ icao: 'MAP', name: 'Map Point', lat: parseFloat(coords[1]), lon: parseFloat(coords[3]) });
                     } else {
@@ -613,7 +628,8 @@
                 const dep = document.getElementById('rp-dash-dep').value.trim().toUpperCase();
                 const arr = document.getElementById('rp-dash-arr').value.trim().toUpperCase();
                 const flStr = document.getElementById('rp-dash-fl').value;
-                const fl = parseInt(flStr.replace(/\D/g, '')) || DEFAULT_FL;
+                let fl = parseInt(flStr.replace(/\D/g, '')) || DEFAULT_FL;
+                if (fl > 550) fl = 550;
                 const wp = document.getElementById('rp-dash-waypoints').value.trim();
                 runCalculation(dep, arr, fl, wp, 'dashboard');
             });
@@ -634,9 +650,13 @@
             
             const flDashInput = document.getElementById('rp-dash-fl');
             flDashInput.addEventListener('input', e => {
-                let val = e.target.value.replace(/\D/g, '');
-                if (val) e.target.value = 'FL' + val;
-                else e.target.value = '';
+                let val = parseInt(e.target.value.replace(/\D/g, ''));
+                if (!isNaN(val)) {
+                    if (val > 550) val = 550;
+                    e.target.value = 'FL' + val;
+                } else {
+                    e.target.value = '';
+                }
             });
             flDashInput.addEventListener('focus', e => {
                 if(!e.target.value) e.target.value = 'FL';
