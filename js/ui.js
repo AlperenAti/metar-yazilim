@@ -1035,6 +1035,39 @@
             $('theme-btn').setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
         });
         $('dashboard-toggle').addEventListener('click', () => dashboard.classList.toggle('collapsed'));
+
+        // Mobile: hamburger sidebar toggle
+        const sidebarToggleBtn = $('sidebar-toggle');
+        const sidebarBackdrop = $('sidebar-backdrop');
+        function openSidebar() {
+            dashboard.classList.add('mobile-open');
+            sidebarBackdrop.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSidebar() {
+            dashboard.classList.remove('mobile-open');
+            sidebarBackdrop.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        if (sidebarToggleBtn) {
+            sidebarToggleBtn.addEventListener('click', () => {
+                if (dashboard.classList.contains('mobile-open')) closeSidebar();
+                else openSidebar();
+            });
+        }
+        if (sidebarBackdrop) {
+            sidebarBackdrop.addEventListener('click', closeSidebar);
+        }
+        // Close sidebar when switching views on mobile
+        const origSwitchView = switchView;
+        // Also close sidebar if a flight/airport is selected on mobile
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && dashboard.classList.contains('mobile-open')) {
+                if (!dashboard.contains(e.target) && e.target !== sidebarToggleBtn && !sidebarToggleBtn?.contains(e.target)) {
+                    closeSidebar();
+                }
+            }
+        }, true);
         
         $('weather-menu-btn').addEventListener('click', () => {
             $('weather-menu-btn').classList.toggle('active');

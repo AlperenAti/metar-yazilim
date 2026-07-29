@@ -39,6 +39,9 @@
         </div>
 
         <div class="header-actions">
+            <button id="sidebar-toggle" class="icon-button mobile-only" type="button" aria-label="Toggle sidebar" title="Toggle sidebar">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+            </button>
             <button id="refresh-map-btn" class="icon-button" type="button" aria-label="Refresh live airspace" title="Refresh live airspace">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"></path></svg>
             </button>
@@ -131,6 +134,10 @@
         </div>
 
         <div class="weather-timestamp hidden" id="weather-timestamp"></div>
+
+        <!-- Mobile Sidebar Backdrop -->
+        <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
         <aside id="dashboard" class="dashboard glass-panel" aria-label="Airspace dashboard">
             <div class="panel-heading">
                 <div>
