@@ -328,7 +328,15 @@
     fetch('data/runway_coords.json')
         .then(res => res.json())
         .then(data => {
-            if (window.MapManager) window.MapManager.runwayCoords = data;
+            if (window.MapManager) {
+                window.MapManager.runwayCoords = data;
+                if (window.UI && window.UI.getSelectedAirport) {
+                    const apt = window.UI.getSelectedAirport();
+                    if (apt && window.UI.repopulateRunways) {
+                        window.UI.repopulateRunways();
+                    }
+                }
+            }
         })
         .catch(err => console.error('Failed to load runway coordinates:', err));
 

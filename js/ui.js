@@ -1198,6 +1198,11 @@
         updateAirportCount: () => {
             if ($('airport-count')) $('airport-count').textContent = formatNumber(window.MapManager.airports.length);
         },
-        getSelectedAirport: () => selectedAirport
+        getSelectedAirport: () => selectedAirport,
+        repopulateRunways: () => {
+            if (selectedAirport && lastWeatherObj) {
+                populateRunwayTable(selectedAirport, lastWeatherObj);
+            }
+        }
     };
 }());

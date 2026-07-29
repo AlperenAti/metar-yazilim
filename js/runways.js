@@ -155,11 +155,15 @@
         }
         
         const runways = window.MapManager.runwayCoords[icao];
+        const normalizedTarget = rwyId.replace(/^0+/, '');
         for (const rwy of runways) {
-            if (rwy.id1 === rwyId && rwy.lat1 && rwy.lon1 && rwy.lat2 && rwy.lon2) {
+            const norm1 = rwy.id1 ? rwy.id1.replace(/^0+/, '') : '';
+            const norm2 = rwy.id2 ? rwy.id2.replace(/^0+/, '') : '';
+            
+            if (norm1 === normalizedTarget && rwy.lat1 && rwy.lon1 && rwy.lat2 && rwy.lon2) {
                 return window.getBearing(rwy.lat1, rwy.lon1, rwy.lat2, rwy.lon2);
             }
-            if (rwy.id2 === rwyId && rwy.lat1 && rwy.lon1 && rwy.lat2 && rwy.lon2) {
+            if (norm2 === normalizedTarget && rwy.lat1 && rwy.lon1 && rwy.lat2 && rwy.lon2) {
                 return window.getBearing(rwy.lat2, rwy.lon2, rwy.lat1, rwy.lon1);
             }
         }
